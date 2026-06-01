@@ -16,8 +16,8 @@ EvalBench is a single-tenant full-stack web application built as a Vercel server
        │                          │
        │                          ▼
        │                  ┌────────────────────┐
-       │                  │  Scoring Engine    │
-       │                  │  (simulated runs)  │
+       │                  │  Providers / Score │
+       │                  │  (Gemini, Groq)    │
        │                  └────────────────────┘
        ▼
   ┌──────────────────┐
@@ -31,7 +31,7 @@ EvalBench is a single-tenant full-stack web application built as a Vercel server
 1. The browser loads the static React client from `/`.
 2. The client uses `fetch('/api/...')` for all data operations.
 3. Vercel's catch-all rewrite (`vercel.json`) routes `/api/*` to the serverless function in `api/index.ts`.
-4. The server validates input with Zod, reads/writes the JSON store, and returns JSON.
+4. The server validates input with Zod, communicates with model providers, runs the assertion engine, reads/writes the JSON store, and returns JSON.
 5. On startup the server ensures `db-store.json` exists. If not, it seeds it from `src/db.ts` factory data.
 
 ## Client routing
@@ -43,10 +43,10 @@ The client uses a hash-based router implemented in `src/App.tsx`. Routes are mat
 The JSON store contains:
 
 - `evalSuites` — array of `EvalSuite`
-- `evalCases` — array of `EvalCase`
+- `evalCases` — array of `EvalCase` (contains custom `AssertionRule`s)
 - `evidenceSources` — array of `EvidenceSource`
 - `evalRuns` — array of `EvalRun`
-- `evalResults` — array of `EvalResult` (joined with `EvalCase` for display)
+- `evalResults` — array of `EvalResult` (contains scored `AssertionResult`s)
 - `regressions` — array of `Regression`
 
 Each top-level entity has a unique `id`. Suites reference test cases via `EvalCase.suiteId`. Runs reference suites via `EvalRun.suiteId` and store their results separately in `evalResults` keyed by `runId`.
@@ -54,9 +54,8 @@ Each top-level entity has a unique `id`. Suites reference test cases via `EvalCa
 ## Serverless constraints
 
 - **Filesystem is read-only** outside `/tmp` on Vercel. The JSON store is loaded into memory at cold start and re-persisted to disk on writes.
-- **Cold starts** may lose data if the in-memory state is not flushed to disk before the function freezes.
-- **No streaming** — runs complete in a single request cycle. Runs in this build are simulated and complete in <1s.
-- **Single instance** — there is no shared state across invocations. For multi-instance production use, replace the JSON store with a real database.
+- **Cold starts** may lose data if the in-memory state is not flushed to disk before the function freezes. For multi-instance production use, replace the JSON store with a real database.
+- **Single instance** — there is no shared state across invocations.
 
 ## File layout
 
@@ -71,6 +70,7 @@ Each top-level entity has a unique `id`. Suites reference test cases via `EvalCa
 │   ├── db.ts             # Seed data and JSON store helpers
 │   ├── db-store.json     # Persisted state (generated)
 │   ├── components/       # React components (Dashboard, SuitesList, etc.)
+│   ├── lib/              # Providers, comparison logic, helpers
 │   ├── types.ts          # TypeScript type definitions
 │   └── ...
 ├── server.ts             # Local dev entry (Vite middleware + Express)
