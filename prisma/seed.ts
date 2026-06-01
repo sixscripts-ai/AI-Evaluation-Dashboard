@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { 
   EvalSuite, EvalCase, EvidenceSource, EvalRun, 
   EvalResult, Regression, ServerState, AssertionResult 
-} from './types.js';
+} from '../src/types.js';
 
 let currentDirname = '';
 try {
@@ -1077,83 +1077,154 @@ function getSeedData(): ServerState {
   };
 }
 
-// Memory database instance
-let dbCachedState: ServerState | null = null;
+import { PrismaClient, Prisma } from '@prisma/client';
 
-export function getDb(): ServerState {
-  if (dbCachedState) {
-    return dbCachedState;
-  }
+const prisma = new PrismaClient();
 
-  try {
-    if (fs.existsSync(STORE_PATH)) {
-      const data = fs.readFileSync(STORE_PATH, 'utf-8');
-      if (data.trim() !== '') {
-        dbCachedState = JSON.parse(data);
-        return dbCachedState!;
+async function main() {
+  console.log('Starting seed...');
+  const data = getSeedData();
+
+  for (const suite of data.suites) {
+    await prisma.evalSuite.upsert({
+      where: { id: suite.id },
+      update: {},
+      create: {
+        id: suite.id,
+        name: suite.name,
+        description: suite.description,
+        project: suite.project,
+        systemType: suite.systemType,
+        status: suite.status,
+        createdAt: new Date(suite.createdAt),
+        updatedAt: new Date(suite.updatedAt),
       }
-    }
-  } catch (error) {
-    console.error('Failed to parse db-store.json, creating a fresh seeded state', error);
+    });
+  }
+  
+  for (const c of data.cases) {
+    await prisma.evalCase.upsert({
+      where: { id: c.id },
+      update: {},
+      create: {
+        id: c.id,
+        suiteId: c.suiteId,
+        name: c.name,
+        input: c.input,
+        expectedOutput: c.expectedOutput,
+        requiredEvidence: c.requiredEvidence,
+        assertions: c.assertions as any,
+        tags: c.tags as any,
+        difficulty: c.difficulty,
+        notes: c.notes,
+        isActive: c.isActive,
+        createdAt: new Date(c.createdAt),
+        updatedAt: new Date(c.updatedAt),
+      }
+    });
   }
 
-  // Generate seed
-  const seeded = getSeedData();
-  dbCachedState = seeded;
-  try {
-    fs.writeFileSync(STORE_PATH, JSON.stringify(seeded, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Failed to write db-store.json', err);
+  for (const src of data.sources) {
+    await prisma.evidenceSource.upsert({
+      where: { id: src.id },
+      update: {},
+      create: {
+        id: src.id,
+        caseId: src.caseId,
+        title: src.title,
+        sourceType: src.sourceType,
+        url: src.url,
+        excerpt: src.excerpt,
+        metadata: src.metadata ? src.metadata as any : Prisma.DbNull,
+        createdAt: new Date(src.createdAt),
+        updatedAt: new Date(src.updatedAt),
+      }
+    });
   }
-  return dbCachedState!;
-}
 
-export function saveDb(state: ServerState): ServerState {
-  dbCachedState = state;
-  try {
-    fs.writeFileSync(STORE_PATH, JSON.stringify(state, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error writing to database store', err);
+  for (const run of data.runs) {
+    await prisma.evalRun.upsert({
+      where: { id: run.id },
+      update: {},
+      create: {
+        id: run.id,
+        suiteId: run.suiteId,
+        modelName: run.modelName,
+        systemVersion: run.systemVersion,
+        status: run.status,
+        startedAt: new Date(run.startedAt),
+        completedAt: run.completedAt ? new Date(run.completedAt) : null,
+        averageScore: run.averageScore,
+        passCount: run.passCount,
+        partialCount: run.partialCount,
+        failCount: run.failCount,
+        averageLatencyMs: run.averageLatencyMs,
+        notes: run.notes,
+        provider: run.provider,
+        runMode: run.runMode,
+        totalInputTokens: run.totalInputTokens,
+        totalOutputTokens: run.totalOutputTokens,
+        totalTokens: run.totalTokens,
+        errorMessage: run.errorMessage,
+        createdAt: new Date(run.createdAt),
+        updatedAt: new Date(run.updatedAt),
+      }
+    });
   }
-  return state;
+
+  for (const res of data.results) {
+    await prisma.evalResult.upsert({
+      where: { id: res.id },
+      update: {},
+      create: {
+        id: res.id,
+        runId: res.runId,
+        caseId: res.caseId,
+        actualOutput: res.actualOutput,
+        status: res.status,
+        score: res.score,
+        latencyMs: res.latencyMs,
+        failureReason: res.failureReason,
+        evidenceMatched: res.evidenceMatched,
+        evidenceCoverageScore: res.evidenceCoverageScore,
+        assertions: res.assertions as any,
+        notes: res.notes,
+        inputTokens: res.inputTokens,
+        outputTokens: res.outputTokens,
+        totalTokens: res.totalTokens,
+        providerLatencyMs: res.providerLatencyMs,
+        providerError: res.providerError,
+        createdAt: new Date(res.createdAt),
+        updatedAt: new Date(res.updatedAt),
+      }
+    });
+  }
+
+  for (const reg of data.regressions) {
+    await prisma.regression.upsert({
+      where: { id: reg.id },
+      update: {},
+      create: {
+        id: reg.id,
+        runId: reg.runId,
+        caseId: reg.caseId,
+        previousResultId: reg.previousResultId,
+        regressionType: reg.regressionType,
+        severity: reg.severity,
+        description: reg.description,
+        createdAt: new Date(reg.createdAt),
+      }
+    });
+  }
+
+  console.log('Seeding complete.');
 }
 
-// Mutations helpers
-export function addSuite(suite: Omit<EvalSuite, 'id' | 'createdAt' | 'updatedAt'>): EvalSuite {
-  const db = getDb();
-  const newSuite: EvalSuite = {
-    ...suite,
-    id: generateId('suite'),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  db.suites.unshift(newSuite);
-  saveDb(db);
-  return newSuite;
-}
-
-export function addCase(testCase: Omit<EvalCase, 'id' | 'createdAt' | 'updatedAt'>): EvalCase {
-  const db = getDb();
-  const newCase: EvalCase = {
-    ...testCase,
-    id: generateId('case'),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  db.cases.push(newCase);
-  saveDb(db);
-  return newCase;
-}
-
-export function addSource(source: Omit<EvidenceSource, 'id' | 'createdAt' | 'updatedAt'>): EvidenceSource {
-  const db = getDb();
-  const newSource: EvidenceSource = {
-    ...source,
-    id: generateId('source'),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  db.sources.push(newSource);
-  saveDb(db);
-  return newSource;
-}
+main()
+  .catch(e => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

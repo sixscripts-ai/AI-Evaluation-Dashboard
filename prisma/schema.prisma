@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model EvalSuite {
+  id          String     @id
+  name        String
+  description String
+  project     String
+  systemType  String
+  status      String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  cases       EvalCase[]
+  runs        EvalRun[]
+}
+
+model EvalCase {
+  id               String           @id
+  suiteId          String
+  suite            EvalSuite        @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  name             String
+  input            String
+  expectedOutput   String
+  requiredEvidence String
+  assertions       Json
+  tags             Json
+  difficulty       String
+  notes            String?
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  sources          EvidenceSource[]
+  results          EvalResult[]
+  regressions      Regression[]
+}
+
+model EvidenceSource {
+  id         String   @id
+  caseId     String
+  case       EvalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  title      String
+  sourceType String
+  url        String?
+  excerpt    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model EvalRun {
+  id                String       @id
+  suiteId           String
+  suite             EvalSuite    @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  modelName         String
+  systemVersion     String
+  status            String
+  startedAt         DateTime     @default(now())
+  completedAt       DateTime?
+  averageScore      Float?
+  passCount         Int          @default(0)
+  partialCount      Int          @default(0)
+  failCount         Int          @default(0)
+  averageLatencyMs  Float?
+  notes             String?
+  provider          String?
+  runMode           String?
+  totalInputTokens  Int?
+  totalOutputTokens Int?
+  totalTokens       Int?
+  errorMessage      String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  results           EvalResult[]
+  regressions       Regression[]
+}
+
+model EvalResult {
+  id                    String     @id
+  runId                 String
+  run                   EvalRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  caseId                String
+  case                  EvalCase   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actualOutput          String
+  status                String
+  score                 Int
+  latencyMs             Int?
+  failureReason         String?
+  evidenceMatched       Boolean
+  evidenceCoverageScore Int?
+  assertions            Json
+  notes                 String?
+  inputTokens           Int?
+  outputTokens          Int?
+  totalTokens           Int?
+  providerLatencyMs     Int?
+  providerError         String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+}
+
+model Regression {
+  id               String   @id
+  runId            String
+  run              EvalRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  caseId           String
+  case             EvalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  previousResultId String?
+  regressionType   String
+  severity         String
+  description      String
+  createdAt        DateTime @default(now())
+}

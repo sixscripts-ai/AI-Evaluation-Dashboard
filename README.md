@@ -30,7 +30,7 @@ EvalBench is a full-stack web application for running and inspecting **evaluatio
 - **Frontend:** React + Vite + Tailwind CSS
 - **Backend:** Express + Node
 - **Validation:** Zod
-- **Persistence:** file-based JSON demo store (`src/db-store.json`)
+- **Persistence:** Neon Postgres with Prisma ORM
 - **Model Providers:** Gemini, Groq, OpenRouter
 - **Evaluation:** deterministic assertion rules + regression checks
 
@@ -78,6 +78,8 @@ OPENROUTER_API_KEY=...     # https://openrouter.ai/keys
 
 DEFAULT_MODEL_PROVIDER=gemini      # gemini | groq | openrouter
 DEFAULT_MODEL_NAME=gemini-2.5-flash
+
+DATABASE_URL=...           # Neon Postgres Connection URL
 ```
 
 ---
@@ -103,7 +105,10 @@ EvalBench uses the following primary concepts to represent evaluations:
 
 ```bash
 npm install
-cp .env.example .env       # Edit to set API keys
+cp .env.example .env       # Edit to set API keys and DATABASE_URL
+npm run db:generate        # Generate Prisma Client
+npm run db:push            # Push schema to local or remote Postgres
+npm run db:seed            # Seed initial mock data
 npm run dev
 ```
 The app opens on `http://localhost:3000`. **No API keys are required to develop the app** — simulated mode works completely offline.
@@ -121,7 +126,6 @@ The application is configured to deploy seamlessly to Vercel as a serverless fun
 
 ## Known Limitations
 
-- **File-based persistence:** The demo JSON store does not survive cold starts in serverless environments. For production, replace with a real database.
 - **Single-user sandbox:** No authentication or multi-tenant isolation.
 - **Keyword-based assertions only:** Currently relies on deterministic rules; no LLM-as-judge yet.
 - **Comparison is run-level, not statistical benchmarking.**
@@ -133,7 +137,6 @@ The application is configured to deploy seamlessly to Vercel as a serverless fun
 ## Next Milestones
 
 - LLM-as-judge assertion mode.
-- Persistent database (SQLite or Postgres).
 - Export / import suite definitions as JSON.
 - Authentication and multi-user support.
 

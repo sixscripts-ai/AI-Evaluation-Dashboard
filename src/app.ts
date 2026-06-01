@@ -2,26 +2,17 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { 
-  getDb, saveDb, addSuite, addCase, addSource, generateId 
-} from './db.js';
+  getAllSuites, getSuiteById, createSuite,
+  getAllCases, getCasesBySuiteId, getCaseById, createCaseWithSource, updateCase,
+  getAllSources, getSourcesByCaseId,
+  getAllRuns, getCompletedRuns, getCompletedRunsBySuiteId, getRunById, getRunsBySuiteId, getResultsByRunId, getResultsByCaseId, getAllResults, getRegressionsByRunId, getAllRegressions, createRunData
+} from './lib/repositories/index.js';
+import { generateId } from './lib/db.js';
 import { SuiteSchema, TestCaseSchema, RunSchema } from './validators.js';
 import { simulateCase, detectRegressions, buildCaseResult, checkEvidenceMatch } from './scoring.js';
 import { EvalRun, EvalResult, Regression, RunMode, ProviderId } from './types.js';
 import { getRunner, listProviders, getProviderInfo } from './lib/model-providers/index.js';
 import { buildEvalPrompt } from './lib/eval-prompt.js';
-
-let currentDirname = '';
-try {
-  if (typeof __dirname !== 'undefined') {
-    currentDirname = __dirname;
-  } else {
-    currentDirname = path.dirname(fileURLToPath(import.meta.url));
-  }
-} catch (e) {
-  currentDirname = path.dirname(fileURLToPath(import.meta.url));
-}
-
-const STORE_PATH = path.join(currentDirname, '..', 'src', 'db-store.json');
 
 // --- Express App ---
 const app = express();
@@ -29,8 +20,7 @@ const app = express();
 // Body parser
 app.use(express.json());
 
-// Ensure DB gets initialized and seeded on start
-getDb();
+
 
 // ==================== API ENDPOINTS ====================
 
@@ -40,20 +30,21 @@ app.get('/api/health', (req, res) => {
 });
 
 // 1. Dashboard Metrics
-app.get('/api/dashboard', (req, res) => {
-  const db = getDb();
+app.get('/api/dashboard', async (req, res) => {
+  const suites = await getAllSuites();
+  const cases = await getAllCases();
+  const runs = await getAllRuns();
+  const results = await getAllResults();
+  const regressions = await getAllRegressions();
   
-  const completedRuns = db.runs.filter(r => r.status === 'completed');
+  const completedRuns = runs.filter(r => r.status === 'completed');
   let latestRunScore = 0;
   let avgLatency = 0;
   
   if (completedRuns.length > 0) {
-    const sorted = [...completedRuns].sort((a, b) => 
-      new Date(b.completedAt || b.startedAt).getTime() - new Date(a.completedAt || a.startedAt).getTime()
-    );
-    latestRunScore = sorted[0].averageScore || 0;
+    latestRunScore = completedRuns[0].averageScore || 0;
     
-    const runsWithLatency = completedRuns.filter(r => r.averageLatencyMs !== undefined);
+    const runsWithLatency = completedRuns.filter(r => r.averageLatencyMs !== null);
     if (runsWithLatency.length > 0) {
       const sum = runsWithLatency.reduce((acc, r) => acc + (r.averageLatencyMs || 0), 0);
       avgLatency = Math.round(sum / runsWithLatency.length);
@@ -64,20 +55,18 @@ app.get('/api/dashboard', (req, res) => {
   let totalPartial = 0;
   let totalFail = 0;
 
-  const allResults = db.results;
-  if (allResults.length > 0) {
-    allResults.forEach(r => {
+  if (results.length > 0) {
+    results.forEach(r => {
       if (r.status === 'pass') totalPass++;
       else if (r.status === 'partial') totalPartial++;
       else if (r.status === 'fail') totalFail++;
     });
   }
 
-  const recentRunsJoined = [...db.runs]
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+  const recentRunsJoined = runs
     .slice(0, 10)
     .map(run => {
-      const suite = db.suites.find(s => s.id === run.suiteId);
+      const suite = suites.find(s => s.id === run.suiteId);
       return {
         ...run,
         suiteName: suite ? suite.name : 'Unknown Suite',
@@ -85,54 +74,51 @@ app.get('/api/dashboard', (req, res) => {
     });
 
   res.json({
-    totalSuites: db.suites.length,
-    totalTestCases: db.cases.length,
+    totalSuites: suites.length,
+    totalTestCases: cases.length,
     latestRunScore: Math.round(latestRunScore),
     passRate: totalPass,
     partialRate: totalPartial,
     failRate: totalFail,
-    totalRegressions: db.regressions.length,
+    totalRegressions: regressions.length,
     averageLatency: avgLatency || 1240,
     recentRuns: recentRunsJoined
   });
 });
 
 // 2. Suites
-app.get('/api/suites', (req, res) => {
-  const db = getDb();
-  const suitesWithStats = db.suites.map(suite => {
-    const suiteCases = db.cases.filter(c => c.suiteId === suite.id);
-    const suiteRuns = db.runs.filter(r => r.suiteId === suite.id && r.status === 'completed');
+app.get('/api/suites', async (req, res) => {
+  const suites = await getAllSuites();
+  const cases = await getAllCases();
+  const runs = await getCompletedRuns();
+  
+  const suitesWithStats = suites.map(suite => {
+    const suiteCases = cases.filter(c => c.suiteId === suite.id);
+    const suiteRuns = runs.filter(r => r.suiteId === suite.id);
     
     let lastScore: number | undefined = undefined;
     if (suiteRuns.length > 0) {
-      const sorted = [...suiteRuns].sort((a, b) => 
-        new Date(b.completedAt || b.startedAt).getTime() - new Date(a.completedAt || a.startedAt).getTime()
-      );
-      lastScore = sorted[0].averageScore;
+      lastScore = suiteRuns[0].averageScore !== null ? suiteRuns[0].averageScore : undefined;
     }
 
     return {
       ...suite,
       caseCount: suiteCases.length,
-      runCount: db.runs.filter(r => r.suiteId === suite.id).length,
+      runCount: suiteRuns.length,
       lastRunScore: lastScore
     };
   });
   res.json(suitesWithStats);
 });
 
-app.get('/api/suites/:id', (req, res) => {
-  const db = getDb();
-  const suite = db.suites.find(s => s.id === req.params.id);
+app.get('/api/suites/:id', async (req, res) => {
+  const suite = await getSuiteById(req.params.id);
   if (!suite) {
     return res.status(404).json({ error: 'Suite not found' });
   }
 
-  const suiteCases = db.cases.filter(c => c.suiteId === suite.id);
-  const suiteRuns = db.runs
-    .filter(r => r.suiteId === suite.id)
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  const suiteCases = await getCasesBySuiteId(suite.id);
+  const suiteRuns = await getRunsBySuiteId(suite.id);
 
   res.json({
     suite,
@@ -141,20 +127,19 @@ app.get('/api/suites/:id', (req, res) => {
   });
 });
 
-app.post('/api/suites', (req, res) => {
+app.post('/api/suites', async (req, res) => {
   const parsed = SuiteSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: parsed.error.format() });
   }
 
-  const newSuite = addSuite(parsed.data);
+  const newSuite = await createSuite(parsed.data);
   res.status(201).json(newSuite);
 });
 
 // 3. Test Cases
-app.post('/api/suites/:id/cases', (req, res) => {
-  const db = getDb();
-  const suite = db.suites.find(s => s.id === req.params.id);
+app.post('/api/suites/:id/cases', async (req, res) => {
+  const suite = await getSuiteById(req.params.id);
   if (!suite) {
     return res.status(404).json({ error: 'Suite not found' });
   }
@@ -169,37 +154,29 @@ app.post('/api/suites/:id/cases', (req, res) => {
     ? tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0)
     : [];
 
-  const newCase = addCase({
+  const { newCase, newSource } = await createCaseWithSource({
     ...rest,
     suiteId: suite.id,
-    tags
-  });
-
-  const newSource = addSource({
-    caseId: newCase.id,
-    title: `Reference Guideline Source: ${newCase.name}`,
-    sourceType: 'document',
-    excerpt: newCase.requiredEvidence,
-    metadata: { autoGenerated: true }
+    tags,
   });
 
   res.status(201).json({ case: newCase, source: newSource });
 });
 
-app.get('/api/cases/:id', (req, res) => {
-  const db = getDb();
-  const testCase = db.cases.find(c => c.id === req.params.id);
+app.get('/api/cases/:id', async (req, res) => {
+  const testCase = await getCaseById(req.params.id);
   if (!testCase) {
     return res.status(404).json({ error: 'Test case not found' });
   }
 
-  const suite = db.suites.find(s => s.id === testCase.suiteId);
-  const caseSources = db.sources.filter(s => s.caseId === testCase.id);
+  const suite = await getSuiteById(testCase.suiteId);
+  const caseSources = await getSourcesByCaseId(testCase.id);
+  const allRuns = await getAllRuns();
+  const caseResults = await getResultsByCaseId(testCase.id);
 
-  const caseResultsWithRun = db.results
-    .filter(r => r.caseId === testCase.id)
+  const caseResultsWithRun = caseResults
     .map(result => {
-      const run = db.runs.find(rn => rn.id === result.runId);
+      const run = allRuns.find(rn => rn.id === result.runId);
       return {
         ...result,
         runModel: run?.modelName || 'Unknown Model',
@@ -217,10 +194,9 @@ app.get('/api/cases/:id', (req, res) => {
   });
 });
 
-app.put('/api/cases/:id', (req, res) => {
-  const db = getDb();
-  const testCaseIndex = db.cases.findIndex(c => c.id === req.params.id);
-  if (testCaseIndex === -1) {
+app.put('/api/cases/:id', async (req, res) => {
+  const testCase = await getCaseById(req.params.id);
+  if (!testCase) {
     return res.status(404).json({ error: 'Test case not found' });
   }
 
@@ -234,88 +210,84 @@ app.put('/api/cases/:id', (req, res) => {
     ? tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0)
     : [];
 
-  const updatedCase = {
-    ...db.cases[testCaseIndex],
+  const updatedCase = await updateCase(testCase.id, {
     ...rest,
-    tags,
-    updatedAt: new Date().toISOString()
-  };
-
-  db.cases[testCaseIndex] = updatedCase;
-  saveDb(db);
+    tags
+  });
 
   res.json(updatedCase);
 });
 
 // 4. Runs
-app.get('/api/runs', (req, res) => {
-  const db = getDb();
-  const runsJoined = db.runs.map(run => {
-    const suite = db.suites.find(s => s.id === run.suiteId);
-    const regressionCount = db.regressions.filter(reg => reg.runId === run.id).length;
+app.get('/api/runs', async (req, res) => {
+  const runs = await getAllRuns();
+  const suites = await getAllSuites();
+  const regressions = await getAllRegressions();
+
+  const runsJoined = runs.map(run => {
+    const suite = suites.find(s => s.id === run.suiteId);
+    const regressionCount = regressions.filter(reg => reg.runId === run.id).length;
     return {
       ...run,
       suiteName: suite ? suite.name : 'Unknown Suite',
       regressionCount
     };
-  }).sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  });
 
   res.json(runsJoined);
 });
 
-app.get('/api/runs/:id', (req, res) => {
-  const db = getDb();
-  const run = db.runs.find(r => r.id === req.params.id);
+app.get('/api/runs/:id', async (req, res) => {
+  const run = await getRunById(req.params.id);
   if (!run) {
     return res.status(404).json({ error: 'Eval Run not found' });
   }
 
-  const suite = db.suites.find(s => s.id === run.suiteId);
+  const suite = await getSuiteById(run.suiteId);
+  const cases = await getAllCases();
+  const runResults = await getResultsByRunId(run.id);
+  const runRegressions = await getRegressionsByRunId(run.id);
   
-  const runResults = db.results
-    .filter(res => res.runId === run.id)
-    .map(result => {
-      const tc = db.cases.find(c => c.id === result.caseId);
-      return {
-        ...result,
-        testCase: tc || null
-      };
-    });
+  const resultsWithCases = runResults.map(result => {
+    const tc = cases.find(c => c.id === result.caseId);
+    return {
+      ...result,
+      testCase: tc || null
+    };
+  });
 
-  const runRegressions = db.regressions
-    .filter(reg => reg.runId === run.id)
-    .map(reg => {
-      const tc = db.cases.find(c => c.id === reg.caseId);
-      return {
-        ...reg,
-        testCase: tc || null
-      };
-    });
+  const regressionsWithCases = runRegressions.map(reg => {
+    const tc = cases.find(c => c.id === reg.caseId);
+    return {
+      ...reg,
+      testCase: tc || null
+    };
+  });
 
   res.json({
     run,
     suiteName: suite ? suite.name : 'Unknown Suite',
-    results: runResults,
-    regressions: runRegressions
+    results: resultsWithCases,
+    regressions: regressionsWithCases
   });
 });
 
 // Create & simulate a run
-app.post('/api/runs', (req, res) => {
+app.post('/api/runs', async (req, res) => {
   const parsed = RunSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: parsed.error.format() });
   }
 
-  const db = getDb();
   const { suiteId, modelName, systemVersion, notes, profile } = parsed.data;
 
-  const suite = db.suites.find(s => s.id === suiteId);
+  const suite = await getSuiteById(suiteId);
   if (!suite) {
     return res.status(404).json({ error: 'Target evaluation suite not found.' });
   }
 
-  const suiteCases = db.cases.filter(c => c.suiteId === suiteId && c.isActive);
+  const cases = await getCasesBySuiteId(suiteId);
+  const suiteCases = cases.filter(c => c.isActive);
   if (suiteCases.length === 0) {
     return res.status(400).json({ error: 'Cannot trigger evaluation. No active test cases found in this suite.' });
   }
@@ -331,7 +303,7 @@ app.post('/api/runs', (req, res) => {
   let failCount = 0;
 
   for (const tc of suiteCases) {
-    const sim = simulateCase(tc, profile);
+    const sim = simulateCase(tc as any, profile);
     const resId = generateId('res');
     
     const rDetail: EvalResult = {
@@ -342,11 +314,16 @@ app.post('/api/runs', (req, res) => {
       status: sim.status,
       score: sim.score,
       latencyMs: sim.latencyMs,
-      failureReason: sim.failureReason,
+      failureReason: sim.failureReason || null,
       evidenceMatched: sim.evidenceMatched,
       evidenceCoverageScore: sim.evidenceCoverageScore,
       assertions: sim.assertions,
-      notes: sim.notes,
+      notes: sim.notes || null,
+      providerLatencyMs: null,
+      providerError: null,
+      inputTokens: null,
+      outputTokens: null,
+      totalTokens: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -363,16 +340,14 @@ app.post('/api/runs', (req, res) => {
   const avgScore = scoreSum / suiteCases.length;
   const avgLatency = Math.round(latencySum / suiteCases.length);
 
-  const suiteCompletedRuns = db.runs
-    .filter(r => r.suiteId === suiteId && r.status === 'completed')
-    .sort((a, b) => new Date(b.completedAt || b.startedAt).getTime() - new Date(a.completedAt || a.startedAt).getTime());
+  const suiteCompletedRuns = await getCompletedRunsBySuiteId(suiteId);
 
   let computedRegressions: Regression[] = [];
   if (suiteCompletedRuns.length > 0) {
     const prevRun = suiteCompletedRuns[0];
-    const prevResults = db.results.filter(res => res.runId === prevRun.id);
+    const prevResults = await getResultsByRunId(prevRun.id);
     
-    computedRegressions = detectRegressions(currentResults, prevResults);
+    computedRegressions = detectRegressions(currentResults as any, prevResults as any);
   }
 
   const newRun: EvalRun = {
@@ -388,18 +363,18 @@ app.post('/api/runs', (req, res) => {
     partialCount,
     failCount,
     averageLatencyMs: avgLatency,
-    notes,
+    notes: notes || null,
     provider: 'simulated',
     runMode: 'simulated',
+    errorMessage: null,
+    totalInputTokens: null,
+    totalOutputTokens: null,
+    totalTokens: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
-  db.runs.unshift(newRun);
-  db.results.push(...currentResults);
-  db.regressions.push(...computedRegressions);
-
-  saveDb(db);
+  await createRunData(newRun, currentResults, computedRegressions);
 
   res.status(201).json({
     runId,
@@ -410,11 +385,14 @@ app.post('/api/runs', (req, res) => {
 });
 
 // 5. Sources
-app.get('/api/sources', (req, res) => {
-  const db = getDb();
-  const sourcesJoined = db.sources.map(source => {
-    const tc = db.cases.find(c => c.id === source.caseId);
-    const suite = tc ? db.suites.find(s => s.id === tc.suiteId) : null;
+app.get('/api/sources', async (req, res) => {
+  const sources = await getAllSources();
+  const cases = await getAllCases();
+  const suites = await getAllSuites();
+
+  const sourcesJoined = sources.map(source => {
+    const tc = cases.find(c => c.id === source.caseId);
+    const suite = tc ? suites.find(s => s.id === tc.suiteId) : null;
     return {
       ...source,
       caseName: tc?.name || 'Isolated Source',
@@ -454,8 +432,7 @@ app.get('/api/providers', (req, res) => {
 //        the previous completed run for the same suite.
 //
 app.post('/api/suites/:id/run-model', async (req, res) => {
-  const db = getDb();
-  const suite = db.suites.find((s) => s.id === req.params.id);
+  const suite = await getSuiteById(req.params.id);
   if (!suite) {
     return res.status(404).json({ error: 'Target evaluation suite not found.' });
   }
@@ -479,7 +456,6 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
   const providerId: ProviderId = (body.provider || 'gemini') as ProviderId;
   const modelName = (body.model || '').trim() || getProviderInfo(providerId).defaultModel;
 
-  // Real mode: validate that a key is present before we start.
   if (runMode === 'real') {
     const info = getProviderInfo(providerId);
     if (!info.available) {
@@ -491,11 +467,12 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
     }
   }
 
-  const allActive = db.cases.filter((c) => c.suiteId === suite.id && c.isActive);
+  const cases = await getCasesBySuiteId(suite.id);
+  const allActive = cases.filter((c) => c.isActive);
   if (allActive.length === 0) {
     return res.status(400).json({ error: 'Cannot trigger evaluation. No active test cases found in this suite.' });
   }
-  // Real runs are capped at 10 cases to keep serverless invocations bounded.
+
   const limit = runMode === 'real' ? 10 : allActive.length;
   const suiteCases = allActive.slice(0, limit);
   if (runMode === 'real' && allActive.length > limit) {
@@ -521,9 +498,8 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
 
   for (const tc of suiteCases) {
     if (runMode === 'simulated') {
-      // Simulated path: use the existing deterministic profiles.
       const profile = body.profile || 'average';
-      const sim = simulateCase(tc, profile);
+      const sim = simulateCase(tc as any, profile);
       const r: EvalResult = {
         id: generateId('res'),
         runId,
@@ -532,11 +508,16 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
         status: sim.status,
         score: sim.score,
         latencyMs: sim.latencyMs,
-        failureReason: sim.failureReason,
+        failureReason: sim.failureReason || null,
         evidenceMatched: sim.evidenceMatched,
         evidenceCoverageScore: sim.evidenceCoverageScore,
         assertions: sim.assertions,
-        notes: sim.notes,
+        notes: sim.notes || null,
+        providerLatencyMs: null,
+        providerError: null,
+        inputTokens: null,
+        outputTokens: null,
+        totalTokens: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -547,12 +528,10 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
       else if (sim.status === 'partial') partialCount++;
       else if (sim.status === 'fail') failCount++;
     } else {
-      // Real path: build prompt, call provider, score assertions, store
-      // everything. We continue to the next case even if one fails.
-      const caseSources = db.sources.filter((s) => s.caseId === tc.id);
+      const caseSources = await getSourcesByCaseId(tc.id);
       const { systemPrompt, input } = buildEvalPrompt({
-        testCase: tc,
-        evidenceSources: caseSources,
+        testCase: tc as any,
+        evidenceSources: caseSources as any,
       });
 
       let providerOut;
@@ -572,7 +551,6 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
       }
 
       if (providerOut.error && !providerOut.output) {
-        // Per-case provider failure: record a failed result and continue.
         const failResult: EvalResult = {
           id: generateId('res'),
           runId,
@@ -580,7 +558,7 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
           actualOutput: '',
           status: 'fail',
           score: 0,
-          latencyMs: providerOut.latencyMs,
+          latencyMs: providerOut.latencyMs || 0,
           failureReason: providerOut.error,
           evidenceMatched: false,
           evidenceCoverageScore: 0,
@@ -595,14 +573,16 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
             },
           ],
           notes: `Provider error: ${providerOut.error}`,
-          providerLatencyMs: providerOut.latencyMs,
+          providerLatencyMs: providerOut.latencyMs || null,
           providerError: providerOut.error,
+          inputTokens: null,
+          outputTokens: null,
+          totalTokens: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
         currentResults.push(failResult);
         failCount++;
-        // We don't add scoreSum/latencySum for fully failed cases.
         if (typeof providerOut.inputTokens === 'number') totalInputTokens += providerOut.inputTokens;
         if (typeof providerOut.outputTokens === 'number') totalOutputTokens += providerOut.outputTokens;
         if (typeof providerOut.totalTokens === 'number') totalTokens += providerOut.totalTokens;
@@ -614,21 +594,20 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
         runId,
         caseId: tc.id,
         actualOutput: providerOut.output,
-        latencyMs: providerOut.latencyMs,
+        latencyMs: providerOut.latencyMs || 0,
         requiredEvidenceMatched: ev.matched,
         evidenceCoverageScore: ev.coverageScore,
         failureReason: providerOut.error,
         notes: `Real run via ${providerId}/${modelName}.`,
-        assertions: tc.assertions,
+        assertions: tc.assertions as any,
       });
-      // Attach provider-specific metadata.
-      built.providerLatencyMs = providerOut.latencyMs;
-      built.providerError = providerOut.error;
-      built.inputTokens = providerOut.inputTokens;
-      built.outputTokens = providerOut.outputTokens;
-      built.totalTokens = providerOut.totalTokens;
+      built.providerLatencyMs = providerOut.latencyMs || null;
+      built.providerError = providerOut.error || null;
+      built.inputTokens = providerOut.inputTokens || null;
+      built.outputTokens = providerOut.outputTokens || null;
+      built.totalTokens = providerOut.totalTokens || null;
 
-      currentResults.push(built);
+      currentResults.push(built as any);
       scoreSum += built.score;
       latencySum += built.latencyMs;
       if (built.status === 'pass') passCount++;
@@ -652,26 +631,15 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
   const avgScore = casesScored > 0 ? scoreSum / casesScored : 0;
   const avgLatency = casesScored > 0 ? Math.round(latencySum / casesScored) : 0;
 
-  // Regression detection against the previous completed run for this suite.
-  const suiteCompletedRuns = db.runs
-    .filter((r) => r.suiteId === suite.id && r.status === 'completed')
-    .sort(
-      (a, b) =>
-        new Date(b.completedAt || b.startedAt).getTime() -
-        new Date(a.completedAt || a.startedAt).getTime()
-    );
+  const suiteCompletedRuns = await getCompletedRunsBySuiteId(suite.id);
 
   let computedRegressions: Regression[] = [];
   if (suiteCompletedRuns.length > 0) {
     const prevRun = suiteCompletedRuns[0];
-    const prevResults = db.results.filter((res) => res.runId === prevRun.id);
-    computedRegressions = detectRegressions(currentResults, prevResults);
+    const prevResults = await getResultsByRunId(prevRun.id);
+    computedRegressions = detectRegressions(currentResults as any, prevResults as any);
   }
 
-  // Run-level status: if every case failed with the same global error,
-  // mark the run as failed. We use a simple heuristic: if there is at
-  // least one provider error string that appears on every result, we
-  // record a run-level error message.
   if (runMode === 'real' && currentResults.length > 0) {
     const errors = currentResults
       .map((r) => r.providerError)
@@ -695,10 +663,13 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
     partialCount,
     failCount,
     averageLatencyMs: avgLatency,
-    notes: body.notes,
+    notes: body.notes || null,
     provider: runMode === 'real' ? providerId : 'simulated',
     runMode,
-    errorMessage: runErrorMessage,
+    errorMessage: runErrorMessage || null,
+    totalInputTokens: null,
+    totalOutputTokens: null,
+    totalTokens: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -709,10 +680,7 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
     newRun.totalTokens = totalTokens;
   }
 
-  db.runs.unshift(newRun);
-  db.results.push(...currentResults);
-  db.regressions.push(...computedRegressions);
-  saveDb(db);
+  await createRunData(newRun, currentResults, computedRegressions);
 
   res.status(201).json({
     runId,
@@ -734,15 +702,7 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
 
 // Reset database
 app.post('/api/settings/reset', async (req, res) => {
-  const fs = await import('fs');
-  try {
-    if (fs.existsSync(STORE_PATH)) {
-      fs.unlinkSync(STORE_PATH);
-    }
-  } catch (e) {}
-
-  const freshDb = getDb();
-  res.json({ message: 'Database reset and seeded successfully!', state: freshDb });
+  res.json({ message: 'Database reset must now be run via CLI `npm run db:seed` or `npm run db:migrate` since migrating to Postgres.', state: {} });
 });
 
 // ==================== PRODUCTION STATIC SERVING ====================
