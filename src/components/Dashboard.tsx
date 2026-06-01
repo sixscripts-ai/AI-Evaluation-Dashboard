@@ -113,7 +113,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         subtitle="EvalBench is an evaluation dashboard for RAG answers, agent decisions, evidence coverage, assertions, and regression behavior across model runs."
         action={
           <button
-            onClick={() => onNavigate('/runs')}
+            onClick={() => onNavigate('/runs/new')}
             className="flex items-center gap-2 px-4 py-1.5 bg-[#bef264] text-black font-semibold text-xs font-mono hover:brightness-110 rounded-sm transition-all cursor-pointer shadow-[0_0_15px_rgba(190,242,100,0.15)]"
           >
             <Play className="w-3.5 h-3.5 fill-current" />

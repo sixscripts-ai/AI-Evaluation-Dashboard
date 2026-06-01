@@ -8,6 +8,7 @@ import CaseNew from './components/CaseNew';
 import CaseDetail from './components/CaseDetail';
 import RunsList from './components/RunsList';
 import RunDetail from './components/RunDetail';
+import RunNew from './components/RunNew';
 import SourcesList from './components/SourcesList';
 import Settings from './components/Settings';
 import SuiteCompare from './components/SuiteCompare';
@@ -65,6 +66,10 @@ export default function App() {
       const caseId = path.substring(7);
       return { page: 'case-detail', caseId };
     }
+    // Route: /runs/new
+    if (path === '/runs/new') {
+      return { page: 'run-new' };
+    }
     // Route: /runs
     if (path === '/runs') {
       return { page: 'runs-list' };
@@ -113,6 +118,8 @@ export default function App() {
         return <CaseDetail caseId={routeData.caseId || ''} onNavigate={handleNavigate} />;
       case 'runs-list':
         return <RunsList onNavigate={handleNavigate} />;
+      case 'run-new':
+        return <RunNew onNavigate={handleNavigate} />;
       case 'run-detail':
         return <RunDetail runId={routeData.runId || ''} onNavigate={handleNavigate} />;
       case 'sources-list':

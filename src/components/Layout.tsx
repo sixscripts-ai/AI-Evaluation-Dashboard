@@ -116,7 +116,7 @@ export function AppShell({ children, currentRoute, onNavigate }: AppShellProps) 
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => onNavigate('/runs')}
+              onClick={() => onNavigate('/runs/new')}
               className="px-3 py-1.5 bg-[#bef264] text-black text-xs font-bold rounded uppercase tracking-wide hover:brightness-110 transition-all cursor-pointer font-sans"
             >
               New Run
