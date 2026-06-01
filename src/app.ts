@@ -217,6 +217,36 @@ app.get('/api/cases/:id', (req, res) => {
   });
 });
 
+app.put('/api/cases/:id', (req, res) => {
+  const db = getDb();
+  const testCaseIndex = db.cases.findIndex(c => c.id === req.params.id);
+  if (testCaseIndex === -1) {
+    return res.status(404).json({ error: 'Test case not found' });
+  }
+
+  const parsed = TestCaseSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Validation failed', details: parsed.error.format() });
+  }
+
+  const { tagsInput, ...rest } = parsed.data;
+  const tags = tagsInput 
+    ? tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0)
+    : [];
+
+  const updatedCase = {
+    ...db.cases[testCaseIndex],
+    ...rest,
+    tags,
+    updatedAt: new Date().toISOString()
+  };
+
+  db.cases[testCaseIndex] = updatedCase;
+  saveDb(db);
+
+  res.json(updatedCase);
+});
+
 // 4. Runs
 app.get('/api/runs', (req, res) => {
   const db = getDb();
@@ -359,7 +389,7 @@ app.post('/api/runs', (req, res) => {
     failCount,
     averageLatencyMs: avgLatency,
     notes,
-    provider: 'gemini',
+    provider: 'simulated',
     runMode: 'simulated',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -589,8 +619,7 @@ app.post('/api/suites/:id/run-model', async (req, res) => {
         evidenceCoverageScore: ev.coverageScore,
         failureReason: providerOut.error,
         notes: `Real run via ${providerId}/${modelName}.`,
-        expectedOutput: tc.expectedOutput,
-        requiredEvidence: tc.requiredEvidence,
+        assertions: tc.assertions,
       });
       // Attach provider-specific metadata.
       built.providerLatencyMs = providerOut.latencyMs;

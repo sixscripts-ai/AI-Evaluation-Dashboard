@@ -22,6 +22,15 @@ export interface EvalSuite {
   updatedAt: string;
 }
 
+export type AssertionType = 'outputIncludes' | 'outputExcludes' | 'exactMatch' | 'regexMatch' | 'evidenceIncludes' | 'evidenceMissing' | 'classificationEquals' | 'jsonFieldEquals' | 'scoreAtLeast' | 'latencyLessThanMs';
+
+export interface AssertionRule {
+  id: string;
+  type: AssertionType;
+  expectedValue: string;
+  weight: number;
+}
+
 export interface EvalCase {
   id: string;
   suiteId: string;
@@ -29,6 +38,7 @@ export interface EvalCase {
   input: string;
   expectedOutput: string;
   requiredEvidence: string;
+  assertions: AssertionRule[];
   tags: string[];
   difficulty: Difficulty;
   notes?: string;

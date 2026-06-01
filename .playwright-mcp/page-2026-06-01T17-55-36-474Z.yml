@@ -1,0 +1,121 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e9]: EvalBench
+    - navigation [ref=e10]:
+      - button "Dashboard" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+        - text: Dashboard
+      - button "Eval Suites" [active] [ref=e14] [cursor=pointer]:
+        - img [ref=e15]
+        - text: Eval Suites
+      - button "Eval Runs" [ref=e19] [cursor=pointer]:
+        - img [ref=e20]
+        - text: Eval Runs
+      - button "Evidence Sources" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - text: Evidence Sources
+      - button "Demo Controllers" [ref=e26] [cursor=pointer]:
+        - img [ref=e27]
+        - text: Demo Controllers
+    - generic [ref=e31]:
+      - generic [ref=e32]: Status
+      - generic [ref=e34]: Online
+      - generic [ref=e36]: React 19 · Vite 6 · Express
+  - main [ref=e37]:
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]: EVALBENCH
+          - generic [ref=e42]: /
+          - generic [ref=e43]: Eval Suites
+        - generic [ref=e44]: v1.0.0
+      - button "New Run" [ref=e46] [cursor=pointer]
+    - generic [ref=e685]:
+      - generic [ref=e686]:
+        - generic [ref=e687]:
+          - heading "Eval Suites" [level=2] [ref=e688]
+          - paragraph [ref=e689]: Group test cases by project or system to track regressions across model runs.
+        - button "New Suite" [ref=e691] [cursor=pointer]:
+          - img [ref=e692]
+          - text: New Suite
+      - generic [ref=e694]:
+        - generic [ref=e695]:
+          - generic [ref=e696]: "Filter:"
+          - generic [ref=e697]:
+            - button "All" [ref=e698] [cursor=pointer]
+            - button "rag" [ref=e699] [cursor=pointer]
+            - button "agent" [ref=e700] [cursor=pointer]
+            - button "classification" [ref=e701] [cursor=pointer]
+            - button "extraction" [ref=e702] [cursor=pointer]
+            - button "summarization" [ref=e703] [cursor=pointer]
+        - generic [ref=e704]: 3 suites
+      - generic [ref=e705]:
+        - generic [ref=e706]:
+          - generic [ref=e707]:
+            - generic [ref=e708]:
+              - generic [ref=e709]: Classification
+              - generic [ref=e710]: SecOps Gateway v4
+            - generic [ref=e711]:
+              - heading "GhostSSH Role Matching" [level=3] [ref=e712]
+              - paragraph [ref=e713]: Validates SSH access rules, permission evaluation based on public keys, expired sessions, and role level mapping.
+          - generic [ref=e714]:
+            - generic [ref=e715]:
+              - generic [ref=e716]:
+                - generic [ref=e717]: Test Cases
+                - generic [ref=e718]: "4"
+              - generic [ref=e719]:
+                - generic [ref=e720]: Runs
+                - generic [ref=e721]: "4"
+            - generic [ref=e722]:
+              - generic [ref=e723]:
+                - generic [ref=e724]: Latest Score
+                - generic [ref=e725]: 73%
+              - button "Open" [ref=e726] [cursor=pointer]:
+                - text: Open
+                - img [ref=e727]
+        - generic [ref=e729]:
+          - generic [ref=e730]:
+            - generic [ref=e731]:
+              - generic [ref=e732]: RAG
+              - generic [ref=e733]: Enterprise Assistance Portal
+            - generic [ref=e734]:
+              - heading "ICT Knowledge Engine Retrieval" [level=3] [ref=e735]
+              - paragraph [ref=e736]: Evaluates vector database retrieval, search grounding, documentation grounding, and correct procedures on VPN, LDAP, and VMs.
+          - generic [ref=e737]:
+            - generic [ref=e738]:
+              - generic [ref=e739]:
+                - generic [ref=e740]: Test Cases
+                - generic [ref=e741]: "4"
+              - generic [ref=e742]:
+                - generic [ref=e743]: Runs
+                - generic [ref=e744]: "2"
+            - generic [ref=e745]:
+              - generic [ref=e746]:
+                - generic [ref=e747]: Latest Score
+                - generic [ref=e748]: 56%
+              - button "Open" [ref=e749] [cursor=pointer]:
+                - text: Open
+                - img [ref=e750]
+        - generic [ref=e752]:
+          - generic [ref=e753]:
+            - generic [ref=e754]:
+              - generic [ref=e755]: RAG
+              - generic [ref=e756]: Student Support bot v1.1
+            - generic [ref=e757]:
+              - heading "Campus Compass Source-Grounded Answers" [level=3] [ref=e758]
+              - paragraph [ref=e759]: Checks conversational groundness for students regarding course prerequisites, campus facilities, medical center hours, and grading policies.
+          - generic [ref=e760]:
+            - generic [ref=e761]:
+              - generic [ref=e762]:
+                - generic [ref=e763]: Test Cases
+                - generic [ref=e764]: "4"
+              - generic [ref=e765]:
+                - generic [ref=e766]: Runs
+                - generic [ref=e767]: "2"
+            - generic [ref=e768]:
+              - generic [ref=e769]:
+                - generic [ref=e770]: Latest Score
+                - generic [ref=e771]: 69%
+              - button "Open" [ref=e772] [cursor=pointer]:
+                - text: Open
+                - img [ref=e773]

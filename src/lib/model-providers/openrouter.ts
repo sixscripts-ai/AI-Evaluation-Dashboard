@@ -182,6 +182,8 @@ export const openrouterInfo = {
   id: 'openrouter' as const,
   label: 'OpenRouter',
   defaultModel: 'openai/gpt-oss-20b:free',
+  description: 'Free+paid models. 20 req/min free tier.',
+  models: ['openai/gpt-oss-20b:free', 'google/gemini-2.5-flash:free', 'meta-llama/llama-3.3-70b:free', 'anthropic/claude-3-haiku:free'],
   envVar: 'OPENROUTER_API_KEY',
   available: Boolean(process.env.OPENROUTER_API_KEY),
 };

@@ -1,0 +1,243 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e9]: EvalBench
+    - navigation [ref=e10]:
+      - button "Dashboard" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+        - text: Dashboard
+      - button "Eval Suites" [ref=e14] [cursor=pointer]:
+        - img [ref=e15]
+        - text: Eval Suites
+      - button "Eval Runs" [ref=e19] [cursor=pointer]:
+        - img [ref=e20]
+        - text: Eval Runs
+      - button "Evidence Sources" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - text: Evidence Sources
+      - button "Demo Controllers" [ref=e26] [cursor=pointer]:
+        - img [ref=e27]
+        - text: Demo Controllers
+    - generic [ref=e31]:
+      - generic [ref=e32]: Status
+      - generic [ref=e34]: Online
+      - generic [ref=e36]: React 19 · Vite 6 · Express
+  - main [ref=e37]:
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]: EVALBENCH
+          - generic [ref=e42]: /
+          - generic [ref=e43]: Recent Runs
+        - generic [ref=e44]: v1.0.0
+      - button "New Run" [ref=e46] [cursor=pointer]
+    - generic [ref=e255]:
+      - navigation [ref=e256]:
+        - button "Dashboard" [ref=e257] [cursor=pointer]
+        - img [ref=e258]
+        - button "Suites" [ref=e260] [cursor=pointer]
+        - img [ref=e261]
+        - button "GhostSSH Role Matching" [ref=e263] [cursor=pointer]
+        - img [ref=e264]
+        - generic [ref=e266]: Run vv1.2.0-rc2
+      - generic [ref=e267]:
+        - generic [ref=e268]:
+          - generic [ref=e269]:
+            - text: Suite
+            - heading "GhostSSH Role Matching" [level=2] [ref=e270]
+          - button "Back to Suite" [ref=e272] [cursor=pointer]
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - generic [ref=e275]: Model
+            - generic [ref=e276]: gemini-2.5-flash
+          - generic [ref=e277]:
+            - generic [ref=e278]: Version
+            - generic [ref=e279]: v1.2.0-rc2
+          - generic [ref=e280]:
+            - generic [ref=e281]: Run ID
+            - generic [ref=e282]: run_6r6gnliyv
+          - generic [ref=e283]:
+            - generic [ref=e284]: Executed
+            - generic [ref=e285]: 6/1/2026, 10:51:02 AM
+        - generic [ref=e286]:
+          - generic [ref=e287]: Notes
+          - text: Manual verification run.
+      - generic [ref=e288]:
+        - generic [ref=e289]:
+          - generic [ref=e290]: Average Score
+          - generic [ref=e291]: 73%
+        - generic [ref=e292]:
+          - generic [ref=e293]: Results
+          - generic [ref=e294]:
+            - generic [ref=e295]: "2"
+            - generic [ref=e296]: /
+            - generic [ref=e297]: "1"
+            - generic [ref=e298]: /
+            - generic [ref=e299]: "1"
+        - generic [ref=e300]:
+          - generic [ref=e301]: Avg Latency
+          - generic [ref=e302]: 1300ms
+        - generic [ref=e303]:
+          - generic [ref=e304]: Regressions
+          - generic [ref=e305]: "1"
+      - generic [ref=e306]:
+        - heading "Regressions Detected" [level=3] [ref=e307]:
+          - img [ref=e308]
+          - text: Regressions Detected
+        - generic [ref=e311]:
+          - generic [ref=e312]:
+            - generic [ref=e313]:
+              - generic [ref=e314] [cursor=pointer]: Grant read-only security auditor role on bastion host
+              - generic [ref=e315]: high
+            - paragraph [ref=e316]: "State Downgrade: Status regressed from PASS to PARTIAL (Score dropped from 92 to 74)."
+          - generic [ref=e317]: "Type: status_downgrade"
+      - generic [ref=e318]:
+        - heading "Test Results" [level=3] [ref=e320]
+        - table [ref=e321]:
+          - rowgroup [ref=e322]:
+            - row "Test Case Status Score Latency Evidence Assertions Action" [ref=e323]:
+              - columnheader [ref=e324]
+              - columnheader "Test Case" [ref=e325]
+              - columnheader "Status" [ref=e326]
+              - columnheader "Score" [ref=e327]
+              - columnheader "Latency" [ref=e328]
+              - columnheader "Evidence" [ref=e329]
+              - columnheader "Assertions" [ref=e330]
+              - columnheader "Action" [ref=e331]
+          - rowgroup [ref=e332]:
+            - 'row "Allow DevOps SSH access with valid public key ID: case_ssh_devops PASS 90% 1182ms Matched (80%) 4 / 4 Hide" [ref=e333]':
+              - cell [ref=e334]:
+                - button [ref=e335] [cursor=pointer]:
+                  - img [ref=e336]
+              - 'cell "Allow DevOps SSH access with valid public key ID: case_ssh_devops" [ref=e338]':
+                - button "Allow DevOps SSH access with valid public key" [ref=e339] [cursor=pointer]
+                - generic [ref=e340]: "ID: case_ssh_devops"
+              - cell "PASS" [ref=e341]:
+                - generic [ref=e342]:
+                  - img [ref=e343]
+                  - text: PASS
+              - cell "90%" [ref=e346]:
+                - generic [ref=e347]: 90%
+              - cell "1182ms" [ref=e348]
+              - cell "Matched (80%)" [ref=e349]:
+                - generic [ref=e350]: Matched (80%)
+              - cell "4 / 4" [ref=e351]:
+                - generic [ref=e352]: 4 / 4
+              - cell "Hide" [ref=e353]:
+                - button "Hide" [ref=e354]
+            - row [ref=e355]:
+              - cell [ref=e356]:
+                - generic [ref=e357]:
+                  - generic [ref=e358]:
+                    - generic [ref=e359]: Input
+                    - code [ref=e361]: "Access Request: User: sally_devops Key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... / devops-prod Gateway: prod-db-01 Token_Validity: valid"
+                  - generic [ref=e362]:
+                    - generic [ref=e363]:
+                      - generic [ref=e364]: Output
+                      - generic [ref=e365]: 1182ms
+                    - code [ref=e367]: "[Corporate Portal Response] Approved access. Role mapped to devops-admin with full shell permissions.. Verified against knowledge guidelines."
+                - generic [ref=e368]:
+                  - generic [ref=e369]:
+                    - generic [ref=e370]: Expected Output
+                    - generic [ref=e371]: Approved access. Role mapped to devops-admin with full shell permissions.
+                  - generic [ref=e372]:
+                    - generic [ref=e373]: Required Evidence
+                    - generic [ref=e374]: sally_devops belongs to the active active-devops-group database record.
+                - generic [ref=e375]:
+                  - generic [ref=e376]: Assertions (4)
+                  - generic [ref=e377]:
+                    - generic [ref=e378]:
+                      - generic [ref=e379]:
+                        - generic [ref=e380]:
+                          - generic [ref=e381]: outputIncludes
+                          - generic [ref=e382]: Pass
+                        - paragraph [ref=e383]: Output correctly includes the expected key phrase/word "Approved".
+                      - generic [ref=e384]:
+                        - generic [ref=e385]: "Expected: Contains term \"Approved\""
+                        - generic [ref=e386]: "Actual: Found term \"Approved\" in output"
+                    - generic [ref=e387]:
+                      - generic [ref=e388]:
+                        - generic [ref=e389]:
+                          - generic [ref=e390]: outputIncludes
+                          - generic [ref=e391]: Pass
+                        - paragraph [ref=e392]: Output correctly includes the expected key phrase/word "access".
+                      - generic [ref=e393]:
+                        - generic [ref=e394]: "Expected: Contains term \"access\""
+                        - generic [ref=e395]: "Actual: Found term \"access\" in output"
+                    - generic [ref=e396]:
+                      - generic [ref=e397]:
+                        - generic [ref=e398]:
+                          - generic [ref=e399]: evidenceIncludes
+                          - generic [ref=e400]: Pass
+                        - paragraph [ref=e401]: "Grounded: Output content successfully references or is supported by evidence: \"sally_devops\"."
+                      - generic [ref=e402]:
+                        - generic [ref=e403]: "Expected: Cites information matching \"sally_devops\""
+                        - generic [ref=e404]: "Actual: Grounding confirmed"
+                    - generic [ref=e405]:
+                      - generic [ref=e406]:
+                        - generic [ref=e407]:
+                          - generic [ref=e408]: latencyLessThanMs
+                          - generic [ref=e409]: Pass
+                        - paragraph [ref=e410]: System speed falls within standard SLAs (< 1500ms).
+                      - generic [ref=e411]:
+                        - generic [ref=e412]: "Expected: Latency < 1500ms"
+                        - generic [ref=e413]: "Actual: 1182ms"
+            - 'row "Reject intern access to secure database cluster ID: case_ssh_intern FAIL 39% 1528ms Missed 0 / 4 Details" [ref=e414]':
+              - cell [ref=e415]:
+                - button [ref=e416] [cursor=pointer]:
+                  - img [ref=e417]
+              - 'cell "Reject intern access to secure database cluster ID: case_ssh_intern" [ref=e419]':
+                - button "Reject intern access to secure database cluster" [ref=e420] [cursor=pointer]
+                - generic [ref=e421]: "ID: case_ssh_intern"
+              - cell "FAIL" [ref=e422]:
+                - generic [ref=e423]:
+                  - img [ref=e424]
+                  - text: FAIL
+              - cell "39%" [ref=e428]:
+                - generic [ref=e429]: 39%
+              - cell "1528ms" [ref=e430]
+              - cell "Missed" [ref=e431]:
+                - generic [ref=e432]: Missed
+              - cell "0 / 4" [ref=e433]:
+                - generic [ref=e434]: 0 / 4
+              - cell "Details" [ref=e435]:
+                - button "Details" [ref=e436]
+            - 'row "Grant read-only security auditor role on bastion host ID: case_ssh_auditor PARTIAL 74% 1274ms Matched (50%) 2 / 4 Details" [ref=e437]':
+              - cell [ref=e438]:
+                - button [ref=e439] [cursor=pointer]:
+                  - img [ref=e440]
+              - 'cell "Grant read-only security auditor role on bastion host ID: case_ssh_auditor" [ref=e442]':
+                - button "Grant read-only security auditor role on bastion host" [ref=e443] [cursor=pointer]
+                - generic [ref=e444]: "ID: case_ssh_auditor"
+              - cell "PARTIAL" [ref=e445]:
+                - generic [ref=e446]:
+                  - img [ref=e447]
+                  - text: PARTIAL
+              - cell "74%" [ref=e449]:
+                - generic [ref=e450]: 74%
+              - cell "1274ms" [ref=e451]
+              - cell "Matched (50%)" [ref=e452]:
+                - generic [ref=e453]: Matched (50%)
+              - cell "2 / 4" [ref=e454]:
+                - generic [ref=e455]: 2 / 4
+              - cell "Details" [ref=e456]:
+                - button "Details" [ref=e457]
+            - 'row "Reject DevOps access due to expired session token ID: case_ssh_expired PASS 89% 1217ms Matched (87%) 4 / 4 Details" [ref=e458]':
+              - cell [ref=e459]:
+                - button [ref=e460] [cursor=pointer]:
+                  - img [ref=e461]
+              - 'cell "Reject DevOps access due to expired session token ID: case_ssh_expired" [ref=e463]':
+                - button "Reject DevOps access due to expired session token" [ref=e464] [cursor=pointer]
+                - generic [ref=e465]: "ID: case_ssh_expired"
+              - cell "PASS" [ref=e466]:
+                - generic [ref=e467]:
+                  - img [ref=e468]
+                  - text: PASS
+              - cell "89%" [ref=e471]:
+                - generic [ref=e472]: 89%
+              - cell "1217ms" [ref=e473]
+              - cell "Matched (87%)" [ref=e474]:
+                - generic [ref=e475]: Matched (87%)
+              - cell "4 / 4" [ref=e476]:
+                - generic [ref=e477]: 4 / 4
+              - cell "Details" [ref=e478]:
+                - button "Details" [ref=e479]

@@ -10,11 +10,19 @@ export const SuiteSchema = z.object({
 
 export type SuiteInput = z.infer<typeof SuiteSchema>;
 
+export const AssertionRuleSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(['outputIncludes', 'outputExcludes', 'exactMatch', 'regexMatch', 'evidenceIncludes', 'evidenceMissing', 'classificationEquals', 'jsonFieldEquals', 'scoreAtLeast', 'latencyLessThanMs']),
+  expectedValue: z.string(),
+  weight: z.number().min(0).default(1),
+});
+
 export const TestCaseSchema = z.object({
   name: z.string().min(3, { message: 'Test case descriptor name must be at least 3 characters.' }),
   input: z.string().min(5, { message: 'Prompt input payload must be at least 5 characters long.' }),
   expectedOutput: z.string().min(5, { message: 'Expected target assertion output must be at least 5 characters.' }),
   requiredEvidence: z.string().min(5, { message: 'Required evidence grounding guidelines must be at least 5 characters.' }),
+  assertions: z.array(AssertionRuleSchema).default([]),
   tagsInput: z.string().optional(), // Comma-separated raw string from UI text input
   difficulty: z.enum(['easy', 'medium', 'hard']),
   notes: z.string().optional(),

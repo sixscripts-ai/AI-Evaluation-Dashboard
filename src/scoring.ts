@@ -1,7 +1,7 @@
 import { 
   EvalSuite, EvalCase, EvidenceSource, EvalRun, 
   EvalResult, Regression, ServerState, AssertionResult,
-  ResultStatus 
+  ResultStatus, AssertionRule
 } from './types.js';
 import { generateId } from './db.js';
 
@@ -23,61 +23,114 @@ export interface SimulatedCaseResult {
  */
 export function evaluateAssertions(
   actualOutput: string,
-  expectedOutput: string,
-  requiredEvidence: string,
+  assertions: AssertionRule[],
   latencyMs: number,
   evidenceMatched: boolean
 ): AssertionResult[] {
-  const assertions: AssertionResult[] = [];
+  const results: AssertionResult[] = [];
 
-  // Assertion 1: outputIncludes key terms from expected output
-  const expectedKeywords = expectedOutput.split(/[\s,.\-"]+/).filter(w => w.length > 5).slice(0, 2);
-  for (const word of expectedKeywords) {
-    const hasWord = actualOutput.toLowerCase().includes(word.toLowerCase());
-    assertions.push({
+  for (const rule of assertions) {
+    let passed = false;
+    let actual = '';
+    let explanation = '';
+
+    const expected = rule.expectedValue;
+    const outputLower = actualOutput.toLowerCase();
+    
+    switch (rule.type) {
+      case 'outputIncludes':
+        passed = outputLower.includes(expected.toLowerCase());
+        actual = passed ? `Found text matching "${expected}"` : `Text "${expected}" not found`;
+        explanation = passed ? `Output correctly included the required phrase.` : `Output was missing the required phrase.`;
+        break;
+      case 'outputExcludes':
+        passed = !outputLower.includes(expected.toLowerCase());
+        actual = passed ? `Text "${expected}" was excluded` : `Found forbidden text "${expected}"`;
+        explanation = passed ? `Output successfully avoided the forbidden phrase.` : `Output incorrectly contained the forbidden phrase.`;
+        break;
+      case 'exactMatch':
+        passed = actualOutput.trim() === expected.trim();
+        actual = actualOutput.substring(0, 50) + (actualOutput.length > 50 ? '...' : '');
+        explanation = passed ? `Output matched expected string exactly.` : `Output did not match exactly.`;
+        break;
+      case 'regexMatch':
+        try {
+          const regex = new RegExp(expected);
+          passed = regex.test(actualOutput);
+          actual = passed ? `Matched regex /${expected}/` : `Did not match regex /${expected}/`;
+          explanation = passed ? `Output matched the required regular expression.` : `Output failed to match regular expression.`;
+        } catch (e) {
+          passed = false;
+          actual = 'Invalid regex';
+          explanation = `The regex pattern /${expected}/ is invalid.`;
+        }
+        break;
+      case 'evidenceIncludes':
+        passed = outputLower.includes(expected.toLowerCase()) || evidenceMatched;
+        actual = passed ? `Evidence grounded` : `Evidence missing`;
+        explanation = passed ? `Output successfully cited required evidence.` : `Output did not refer to the required evidence keyword.`;
+        break;
+      case 'evidenceMissing':
+        passed = !outputLower.includes(expected.toLowerCase()) && !evidenceMatched;
+        actual = passed ? `Evidence omitted` : `Evidence incorrectly cited`;
+        explanation = passed ? `Output successfully omitted the evidence keyword.` : `Output incorrectly referenced the evidence keyword.`;
+        break;
+      case 'classificationEquals':
+        passed = outputLower.trim() === expected.toLowerCase().trim();
+        actual = outputLower.trim();
+        explanation = passed ? `Classification label matched.` : `Classification label did not match.`;
+        break;
+      case 'jsonFieldEquals':
+        try {
+          const parts = expected.split('=');
+          if (parts.length >= 2) {
+            const field = parts[0].trim();
+            const val = parts.slice(1).join('=').trim();
+            const parsed = JSON.parse(actualOutput);
+            const resolvePath = (obj: any, path: string) => path.split('.').reduce((o, i) => o ? o[i] : undefined, obj);
+            const actualVal = resolvePath(parsed, field);
+            passed = String(actualVal) === val;
+            actual = `Field ${field} = ${actualVal}`;
+            explanation = passed ? `JSON field matched expected value.` : `JSON field did not match expected value.`;
+          } else {
+             passed = false;
+             actual = 'Invalid format';
+             explanation = `Expected format "field=value"`;
+          }
+        } catch (e) {
+          passed = false;
+          actual = 'Invalid JSON';
+          explanation = `Output was not valid JSON.`;
+        }
+        break;
+      case 'scoreAtLeast':
+        passed = false;
+        actual = 'N/A';
+        explanation = `scoreAtLeast not implemented for direct output parsing.`;
+        break;
+      case 'latencyLessThanMs':
+        const targetLatency = parseInt(expected, 10) || 1500;
+        passed = latencyMs < targetLatency;
+        actual = `${latencyMs}ms`;
+        explanation = passed ? `Latency falls within standard SLA (< ${targetLatency}ms).` : `Performance Regression: System took longer than ${targetLatency}ms SLA.`;
+        break;
+      default:
+        passed = false;
+        actual = 'Unknown assertion type';
+        explanation = `Unknown assertion type: ${rule.type}`;
+    }
+
+    results.push({
       id: generateId('as_eval'),
-      type: 'outputIncludes',
-      status: hasWord ? 'pass' : 'fail',
-      expected: `Contains term "${word}"`,
-      actual: hasWord ? `Found term "${word}" in output` : `Missing term "${word}"`,
-      explanation: hasWord 
-        ? `Output correctly includes the expected key phrase/word "${word}".`
-        : `Output failed to include critical descriptive word "${word}".`
+      type: rule.type as any,
+      status: passed ? 'pass' : 'fail',
+      expected,
+      actual,
+      explanation
     });
   }
 
-  // Assertion 2: evidenceIncludes if required evidence is supplied
-  if (requiredEvidence) {
-    const evidenceKeyTerms = requiredEvidence.split(/[\s,.\-"]+/).filter(w => w.length > 4).slice(0, 1);
-    for (const term of evidenceKeyTerms) {
-      const hasTerm = actualOutput.toLowerCase().includes(term.toLowerCase()) || evidenceMatched;
-      assertions.push({
-        id: generateId('as_eval'),
-        type: 'evidenceIncludes',
-        status: hasTerm ? 'pass' : 'fail',
-        expected: `Cites information matching "${term}"`,
-        actual: hasTerm ? `Grounding confirmed` : `No clear references to "${term}"`,
-        explanation: hasTerm
-          ? `Grounded: Output content successfully references or is supported by evidence: "${term}".`
-          : `Hallucination Risk: Output does not refer to the required evidence source keywords.`
-      });
-    }
-  }
-
-  // Assertion 3: Latency bound SLA check
-  const latencyPass = latencyMs < 1500;
-  assertions.push({
-    id: generateId('as_eval'),
-    type: 'latencyLessThanMs',
-    status: latencyPass ? 'pass' : 'fail',
-    expected: 'Latency < 1500ms',
-    actual: `${latencyMs}ms`,
-    explanation: latencyPass
-      ? `System speed falls within standard SLAs (< 1500ms).`
-      : `Performance Regression: System took longer than the 1500ms SLA budget.`
-  });
-
-  return assertions;
+  return results;
 }
 
 /**
@@ -96,20 +149,18 @@ export function buildCaseResult(
     evidenceCoverageScore: number;
     failureReason?: string;
     notes?: string;
-    expectedOutput: string;
-    requiredEvidence: string;
+    assertions: AssertionRule[];
   }
 ): EvalResult {
-  const assertions = evaluateAssertions(
+  const assertionResults = evaluateAssertions(
     args.actualOutput,
-    args.expectedOutput,
-    args.requiredEvidence,
+    args.assertions,
     args.latencyMs,
     args.requiredEvidenceMatched
   );
 
-  const total = assertions.length;
-  const passes = assertions.filter((a) => a.status === 'pass').length;
+  const total = assertionResults.length;
+  const passes = assertionResults.filter((a) => a.status === 'pass').length;
   const status: ResultStatus =
     total === 0
       ? 'fail'
@@ -131,7 +182,7 @@ export function buildCaseResult(
     failureReason: args.failureReason,
     evidenceMatched: args.requiredEvidenceMatched,
     evidenceCoverageScore: args.evidenceCoverageScore,
-    assertions,
+    assertions: assertionResults,
     notes: args.notes,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -248,8 +299,7 @@ export function simulateCase(
   // Generate assertion records
   const assertions = evaluateAssertions(
     actualOutput, 
-    testCase.expectedOutput, 
-    testCase.requiredEvidence, 
+    testCase.assertions, 
     latencyMs, 
     evidenceMatched
   );

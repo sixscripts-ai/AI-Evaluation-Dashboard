@@ -175,6 +175,8 @@ export const groqInfo = {
   id: 'groq' as const,
   label: 'Groq',
   defaultModel: 'llama-3.1-8b-instant',
+  description: 'Fast inference. Free tier: 30 req/min.',
+  models: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
   envVar: 'GROQ_API_KEY',
   available: Boolean(process.env.GROQ_API_KEY),
 };

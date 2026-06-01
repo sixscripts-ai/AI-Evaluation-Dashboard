@@ -96,34 +96,52 @@ export default function RunsList({ onNavigate }: RunsListProps) {
             </h3>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-black/30 text-zinc-400 border-b border-white/5 uppercase text-[10px] tracking-wider font-bold">
-                  <th className="py-3 px-6">Suite</th>
-                  <th className="py-3 px-4">Model</th>
-                  <th className="py-3 px-4">Version</th>
-                  <th className="py-3 px-4">Mode</th>
-                  <th className="py-3 px-4 text-center">Score</th>
-                  <th className="py-3 px-4 text-center">Pass / Partial / Fail</th>
-                  <th className="py-3 px-4 text-center">Avg Latency</th>
-                  <th className="py-3 px-4 text-center">Regressions</th>
-                  <th className="py-3 px-4">Executed</th>
-                  <th className="py-3 px-6 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {runs.map((rn) => (
-                  <tr key={rn.id} className="hover:bg-white/5 transition-colors">
-                    <td className="py-3 px-6">
-                      <button
-                        onClick={() => onNavigate(`/suites/${rn.suiteId}`)}
-                        className="font-bold text-white hover:text-[#bef264] hover:underline cursor-pointer font-sans text-left"
-                      >
-                        {rn.suiteName}
-                      </button>
-                      <span className="block text-[10px] text-zinc-500 mt-0.5">ID: {rn.id}</span>
-                    </td>
+          {/* Pre-calculate completed runs count per suite */}
+          {(() => {
+            const completedCountBySuite = runs.reduce((acc, r) => {
+              if (r.status === 'completed') {
+                acc[r.suiteId] = (acc[r.suiteId] || 0) + 1;
+              }
+              return acc;
+            }, {} as Record<string, number>);
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-black/30 text-zinc-400 border-b border-white/5 uppercase text-[10px] tracking-wider font-bold">
+                      <th className="py-3 px-6">Suite</th>
+                      <th className="py-3 px-4">Model</th>
+                      <th className="py-3 px-4">Version</th>
+                      <th className="py-3 px-4">Mode</th>
+                      <th className="py-3 px-4 text-center">Score</th>
+                      <th className="py-3 px-4 text-center">Pass / Partial / Fail</th>
+                      <th className="py-3 px-4 text-center">Avg Latency</th>
+                      <th className="py-3 px-4 text-center">Regressions</th>
+                      <th className="py-3 px-4">Executed</th>
+                      <th className="py-3 px-6 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {runs.map((rn) => (
+                      <tr key={rn.id} className="hover:bg-white/5 transition-colors">
+                        <td className="py-3 px-6">
+                          <button
+                            onClick={() => onNavigate(`/suites/${rn.suiteId}`)}
+                            className="font-bold text-white hover:text-[#bef264] hover:underline cursor-pointer font-sans text-left block"
+                          >
+                            {rn.suiteName}
+                          </button>
+                          <span className="block text-[10px] text-zinc-500 mt-0.5">ID: {rn.id}</span>
+                          {completedCountBySuite[rn.suiteId] >= 2 && (
+                            <button
+                              onClick={() => onNavigate(`/suites/${rn.suiteId}/compare`)}
+                              className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-[#bef264] hover:underline cursor-pointer font-sans font-semibold"
+                            >
+                              ⚖️ Compare Suite Runs
+                            </button>
+                          )}
+                        </td>
                     <td className="py-3 px-4">
                       <span className="text-zinc-300 font-bold">{rn.modelName}</span>
                     </td>
@@ -191,6 +209,8 @@ export default function RunsList({ onNavigate }: RunsListProps) {
               </tbody>
             </table>
           </div>
+          );
+          })()}
         </div>
       )}
     </div>

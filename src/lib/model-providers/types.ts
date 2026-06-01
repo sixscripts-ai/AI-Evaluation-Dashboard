@@ -45,6 +45,8 @@ export interface ProviderInfo {
   id: ProviderId;
   label: string;
   defaultModel: string;
+  description: string;
+  models: string[];
   envVar: string;
   available: boolean;
 }

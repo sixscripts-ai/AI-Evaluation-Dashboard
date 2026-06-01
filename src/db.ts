@@ -58,6 +58,10 @@ function getSeedData(): ServerState {
     input: `Access Request:\nUser: sally_devops\nKey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... / devops-prod\nGateway: prod-db-01\nToken_Validity: valid`,
     expectedOutput: 'Approved access. Role mapped to devops-admin with full shell permissions.',
     requiredEvidence: 'sally_devops belongs to the active active-devops-group database record.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'Approved access', weight: 1 },
+      { id: generateId('asr'), type: 'latencyLessThanMs', expectedValue: '1500', weight: 1 }
+    ],
     tags: ['ssh', 'devops', 'security', 'role-map'],
     difficulty: 'easy',
     notes: 'Primary verification path for active directory sync.',
@@ -86,6 +90,10 @@ function getSeedData(): ServerState {
     input: `Access Request:\nUser: bob_intern\nKey: ssh-rsa AAAAB3NzaC1yc... / intern-finance\nGateway: prod-db-01\nToken_Validity: valid`,
     expectedOutput: 'Access Denied. Reason: Insufficient permissions for database cluster gateway.',
     requiredEvidence: 'bob_intern restricted from prod cluster databases due to internship policy Section 4.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'Access Denied', weight: 1 },
+      { id: generateId('asr'), type: 'evidenceIncludes', expectedValue: 'Section 4', weight: 1 }
+    ],
     tags: ['rejection', 'least-privilege', 'database'],
     difficulty: 'medium',
     notes: 'Crucial for compliance compliance audit requirements.',
@@ -113,6 +121,10 @@ function getSeedData(): ServerState {
     input: `Access Request:\nUser: alice_auditor\nKey: ssh-ed25519 AAAAC1... / audit-global\nGateway: bastion-01\nToken_Validity: valid`,
     expectedOutput: 'Approved access. Role mapped to security-auditor-readonly. Commands are logged to firewall audit log.',
     requiredEvidence: 'alice_auditor has audit clearance certificate G-992 and audit role.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'security-auditor-readonly', weight: 1 },
+      { id: generateId('asr'), type: 'evidenceIncludes', expectedValue: 'G-992', weight: 1 }
+    ],
     tags: ['auditor', 'bastion', 'compliance'],
     difficulty: 'medium',
     isActive: true,
@@ -139,6 +151,10 @@ function getSeedData(): ServerState {
     input: `Access Request:\nUser: sally_devops\nKey: ssh-ed25519 AAAAC3NzaC... / devops-prod\nGateway: prod-db-01\nToken_Validity: expired`,
     expectedOutput: 'Access Denied. Reason: Token has expired. Please run kinit to refresh keys.',
     requiredEvidence: 'Session token expired error code ERR_AUTH_EXP.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'expired', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'kinit', weight: 1 }
+    ],
     tags: ['expirations', 'token', 'error-handling'],
     difficulty: 'hard',
     isActive: true,
@@ -179,6 +195,10 @@ function getSeedData(): ServerState {
     input: 'How do I configure the WireGuard VPN client on MacOS Sequoia for high-security zones?',
     expectedOutput: 'Set Server endpoint to wg.sec.corp.com:51820, Protocol UDP, DNS to 10.0.80.5, and import corporate-private.conf key profile.',
     requiredEvidence: 'wg.sec.corp.com:51820 with private configuration profile is mandatory.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'wg.sec.corp.com:51820', weight: 1 },
+      { id: generateId('asr'), type: 'evidenceIncludes', expectedValue: '10.0.80.5', weight: 1 }
+    ],
     tags: ['vpn', 'macos', 'wireguard'],
     difficulty: 'easy',
     isActive: true,
@@ -205,6 +225,10 @@ function getSeedData(): ServerState {
     input: 'What is the password dynamic requirement and reset rotation period for central LDAP?',
     expectedOutput: 'Minimum 16 characters, must include numbers, special characters, mixed case, and reset mandatory every 90 days.',
     requiredEvidence: 'Reset mandatory every 90 days and minimum length of 16 characters.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: '16 characters', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: '90 days', weight: 1 }
+    ],
     tags: ['ldap', 'password-policy', 'active-directory'],
     difficulty: 'easy',
     isActive: true,
@@ -231,6 +255,11 @@ function getSeedData(): ServerState {
     input: 'What are the red and amber alerts for Server Room 2B thermal guidelines?',
     expectedOutput: 'Amber alert triggers at 25°C, Red alert/automatic power-down of dev rack initiated at 30°C.',
     requiredEvidence: 'Amber Alert 25C, Red Alert 30C with system shutdowns.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: '25°C', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: '30°C', weight: 1 },
+      { id: generateId('asr'), type: 'latencyLessThanMs', expectedValue: '1500', weight: 1 }
+    ],
     tags: ['hardware', 'datacenter', 'thermal'],
     difficulty: 'medium',
     isActive: true,
@@ -257,6 +286,11 @@ function getSeedData(): ServerState {
     input: 'List the exact steps to retire an inactive VMware cluster VM in our registry.',
     expectedOutput: '1. Backup snapshot. 2. Remove DNS records. 3. Delete VM storage volume. 4. Release static IP allocation. 5. Archive logs.',
     requiredEvidence: 'Required actions: Snapshot backups, DNS cleanup, drive deletion, static IP releasing, and log archival.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'Snapshot', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'DNS', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'IP allocation', weight: 1 }
+    ],
     tags: ['vmware', 'decommission', 'cloud'],
     difficulty: 'hard',
     isActive: true,
@@ -297,6 +331,11 @@ function getSeedData(): ServerState {
     input: 'What are the required prerequisites to enroll in Advanced Quantum Mechanics (PHY-301)?',
     expectedOutput: 'Must complete Intro Classical Mechanics (PHY-201) and Multi-variable Calculus (MAT-203), both with a letter grade of C- or better.',
     requiredEvidence: 'PHY-201 and MAT-203 with minimum grade of C- are essential.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'PHY-201', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'MAT-203', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'C-', weight: 1 }
+    ],
     tags: ['physics', 'enrollment', 'degree-plan'],
     difficulty: 'easy',
     isActive: true,
@@ -324,6 +363,10 @@ function getSeedData(): ServerState {
     input: 'Where can I buy a student parking permit, and what is its price for a single semester?',
     expectedOutput: 'Buy online on student portal or at Campus Police desk (Building 1A). Single semester permit costs $180, valid in Lot G, R, and S.',
     requiredEvidence: 'Online student portal or Building 1A, costing $180 per semester.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'Building 1A', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: '$180', weight: 1 }
+    ],
     tags: ['parking', 'fees', 'nexus'],
     difficulty: 'easy',
     isActive: true,
@@ -350,6 +393,10 @@ function getSeedData(): ServerState {
     input: 'What are the operating hours for the Campus Medical Center on Saturday and Sunday?',
     expectedOutput: 'Saturday open from 9:00 AM to 1:00 PM for urgent care only. Sunday closed.',
     requiredEvidence: 'Saturday 9:00 AM - 1:00 PM (urgent care), Sunday closed.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: '9:00 AM', weight: 1 },
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: 'Sunday closed', weight: 1 }
+    ],
     tags: ['health', 'hours', 'accommodations'],
     difficulty: 'medium',
     isActive: true,
@@ -376,6 +423,10 @@ function getSeedData(): ServerState {
     input: 'What is the deadline and process of filing a Grade Appeal for a computer science course?',
     expectedOutput: 'Must submit a formal appeal package using Grade-Appeal-Form within 14 calendar days of final grades release, first presenting it to the instructing professor.',
     requiredEvidence: '14 calendar days of final grades release and submission of Grade-Appeal-Form.',
+    assertions: [
+      { id: generateId('asr'), type: 'outputIncludes', expectedValue: '14', weight: 1 },
+      { id: generateId('asr'), type: 'evidenceIncludes', expectedValue: 'Grade-Appeal-Form', weight: 1 }
+    ],
     tags: ['policies', 'grades', 'ombuds'],
     difficulty: 'hard',
     isActive: true,

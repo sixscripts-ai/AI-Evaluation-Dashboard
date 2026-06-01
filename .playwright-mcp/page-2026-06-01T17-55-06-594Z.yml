@@ -1,0 +1,226 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e9]: EvalBench
+    - navigation [ref=e10]:
+      - button "Dashboard" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+        - text: Dashboard
+      - button "Eval Suites" [ref=e14] [cursor=pointer]:
+        - img [ref=e15]
+        - text: Eval Suites
+      - button "Eval Runs" [ref=e19] [cursor=pointer]:
+        - img [ref=e20]
+        - text: Eval Runs
+      - button "Evidence Sources" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - text: Evidence Sources
+      - button "Demo Controllers" [ref=e26] [cursor=pointer]:
+        - img [ref=e27]
+        - text: Demo Controllers
+    - generic [ref=e31]:
+      - generic [ref=e32]: Status
+      - generic [ref=e34]: Online
+      - generic [ref=e36]: React 19 · Vite 6 · Express
+  - main [ref=e37]:
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]: EVALBENCH
+          - generic [ref=e42]: /
+          - generic [ref=e43]: Eval Suites
+        - generic [ref=e44]: v1.0.0
+      - button "New Run" [ref=e46] [cursor=pointer]
+    - generic [ref=e50]:
+      - navigation [ref=e51]:
+        - button "Dashboard" [ref=e52] [cursor=pointer]
+        - img [ref=e53]
+        - button "Suites" [ref=e55] [cursor=pointer]
+        - img [ref=e56]
+        - generic [ref=e58]: GhostSSH Role Matching
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - generic [ref=e63]: classification
+              - generic [ref=e64]: "Project: SecOps Gateway v4"
+            - heading "GhostSSH Role Matching" [level=1] [ref=e65]
+          - generic [ref=e66]:
+            - button "+ Add Case" [ref=e67] [cursor=pointer]
+            - button "Simulate" [ref=e68] [cursor=pointer]:
+              - img [ref=e69]
+              - text: Simulate
+            - button "Real Eval" [ref=e71] [cursor=pointer]:
+              - img [ref=e72]
+              - text: Real Eval
+        - paragraph [ref=e75]: Validates SSH access rules, permission evaluation based on public keys, expired sessions, and role level mapping.
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - img [ref=e78]
+            - text: "Suite ID:"
+            - generic [ref=e81]: suite_ghostssh
+          - generic [ref=e82]:
+            - img [ref=e83]
+            - text: "Created:"
+            - generic [ref=e85]: 5/22/2026
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - heading "Test Cases (4)" [level=3] [ref=e89]
+            - button "+ Add Case" [ref=e90] [cursor=pointer]
+          - table [ref=e92]:
+            - rowgroup [ref=e93]:
+              - row "Name Required Evidence Difficulty Tags Active Action" [ref=e94]:
+                - columnheader "Name" [ref=e95]
+                - columnheader "Required Evidence" [ref=e96]
+                - columnheader "Difficulty" [ref=e97]
+                - columnheader "Tags" [ref=e98]
+                - columnheader "Active" [ref=e99]
+                - columnheader "Action" [ref=e100]
+            - rowgroup [ref=e101]:
+              - 'row "Allow DevOps SSH access with valid public key Expected: Approved access. Role mapped to devops-admin with full shell permissions. sally_devops belongs to the active active-devops-group database record. easy ssh devops security role-map View" [ref=e102]':
+                - 'cell "Allow DevOps SSH access with valid public key Expected: Approved access. Role mapped to devops-admin with full shell permissions." [ref=e103]':
+                  - button "Allow DevOps SSH access with valid public key" [ref=e104] [cursor=pointer]
+                  - generic [ref=e105]: "Expected: Approved access. Role mapped to devops-admin with full shell permissions."
+                - cell "sally_devops belongs to the active active-devops-group database record." [ref=e106]:
+                  - generic [ref=e107]: sally_devops belongs to the active active-devops-group database record.
+                - cell "easy" [ref=e108]
+                - cell "ssh devops security role-map" [ref=e109]:
+                  - generic [ref=e110]:
+                    - generic [ref=e111]: ssh
+                    - generic [ref=e112]: devops
+                    - generic [ref=e113]: security
+                    - generic [ref=e114]: role-map
+                - cell [ref=e115]
+                - cell "View" [ref=e117]:
+                  - button "View" [ref=e118]
+              - 'row "Reject intern access to secure database cluster Expected: Access Denied. Reason: Insufficient permissions for database cluster gateway. bob_intern restricted from prod cluster databases due to internship policy Section 4. medium rejection least-privilege database View" [ref=e119]':
+                - 'cell "Reject intern access to secure database cluster Expected: Access Denied. Reason: Insufficient permissions for database cluster gateway." [ref=e120]':
+                  - button "Reject intern access to secure database cluster" [ref=e121] [cursor=pointer]
+                  - generic [ref=e122]: "Expected: Access Denied. Reason: Insufficient permissions for database cluster gateway."
+                - cell "bob_intern restricted from prod cluster databases due to internship policy Section 4." [ref=e123]:
+                  - generic [ref=e124]: bob_intern restricted from prod cluster databases due to internship policy Section 4.
+                - cell "medium" [ref=e125]
+                - cell "rejection least-privilege database" [ref=e126]:
+                  - generic [ref=e127]:
+                    - generic [ref=e128]: rejection
+                    - generic [ref=e129]: least-privilege
+                    - generic [ref=e130]: database
+                - cell [ref=e131]
+                - cell "View" [ref=e133]:
+                  - button "View" [ref=e134]
+              - 'row "Grant read-only security auditor role on bastion host Expected: Approved access. Role mapped to security-auditor-readonly. Commands are logged to firewall audit log. alice_auditor has audit clearance certificate G-992 and audit role. medium auditor bastion compliance View" [ref=e135]':
+                - 'cell "Grant read-only security auditor role on bastion host Expected: Approved access. Role mapped to security-auditor-readonly. Commands are logged to firewall audit log." [ref=e136]':
+                  - button "Grant read-only security auditor role on bastion host" [ref=e137] [cursor=pointer]
+                  - generic [ref=e138]: "Expected: Approved access. Role mapped to security-auditor-readonly. Commands are logged to firewall audit log."
+                - cell "alice_auditor has audit clearance certificate G-992 and audit role." [ref=e139]:
+                  - generic [ref=e140]: alice_auditor has audit clearance certificate G-992 and audit role.
+                - cell "medium" [ref=e141]
+                - cell "auditor bastion compliance" [ref=e142]:
+                  - generic [ref=e143]:
+                    - generic [ref=e144]: auditor
+                    - generic [ref=e145]: bastion
+                    - generic [ref=e146]: compliance
+                - cell [ref=e147]
+                - cell "View" [ref=e149]:
+                  - button "View" [ref=e150]
+              - 'row "Reject DevOps access due to expired session token Expected: Access Denied. Reason: Token has expired. Please run kinit to refresh keys. Session token expired error code ERR_AUTH_EXP. hard expirations token error-handling View" [ref=e151]':
+                - 'cell "Reject DevOps access due to expired session token Expected: Access Denied. Reason: Token has expired. Please run kinit to refresh keys." [ref=e152]':
+                  - button "Reject DevOps access due to expired session token" [ref=e153] [cursor=pointer]
+                  - generic [ref=e154]: "Expected: Access Denied. Reason: Token has expired. Please run kinit to refresh keys."
+                - cell "Session token expired error code ERR_AUTH_EXP." [ref=e155]:
+                  - generic [ref=e156]: Session token expired error code ERR_AUTH_EXP.
+                - cell "hard" [ref=e157]
+                - cell "expirations token error-handling" [ref=e158]:
+                  - generic [ref=e159]:
+                    - generic [ref=e160]: expirations
+                    - generic [ref=e161]: token
+                    - generic [ref=e162]: error-handling
+                - cell [ref=e163]
+                - cell "View" [ref=e165]:
+                  - button "View" [ref=e166]
+        - generic [ref=e167]:
+          - heading "Run History" [level=3] [ref=e169]
+          - table [ref=e171]:
+            - rowgroup [ref=e172]:
+              - row "Model Version Mode Average Score Pass / Partial / Fail Latency Executed Action" [ref=e173]:
+                - columnheader "Model" [ref=e174]
+                - columnheader "Version" [ref=e175]
+                - columnheader "Mode" [ref=e176]
+                - columnheader "Average Score" [ref=e177]
+                - columnheader "Pass / Partial / Fail" [ref=e178]
+                - columnheader "Latency" [ref=e179]
+                - columnheader "Executed" [ref=e180]
+                - columnheader "Action" [ref=e181]
+            - rowgroup [ref=e182]:
+              - 'row "gemini-2.5-flash Run ID: run_6r6gnliyv v1.2.0-rc2 Simulated 73% 2 / 1 / 1 1300ms 6/1/2026, 10:51:02 AM View →" [ref=e183]':
+                - 'cell "gemini-2.5-flash Run ID: run_6r6gnliyv" [ref=e184]':
+                  - generic [ref=e185]: gemini-2.5-flash
+                  - generic [ref=e186]: "Run ID: run_6r6gnliyv"
+                - cell "v1.2.0-rc2" [ref=e187]
+                - cell "Simulated" [ref=e188]
+                - cell "73%" [ref=e189]
+                - cell "2 / 1 / 1" [ref=e190]:
+                  - generic [ref=e191]:
+                    - generic [ref=e192]: "2"
+                    - generic [ref=e193]: /
+                    - generic [ref=e194]: "1"
+                    - generic [ref=e195]: /
+                    - generic [ref=e196]: "1"
+                - cell "1300ms" [ref=e197]
+                - cell "6/1/2026, 10:51:02 AM" [ref=e198]
+                - cell "View →" [ref=e199]:
+                  - button "View →" [ref=e200]
+              - 'row "gemini-2.5-flash Run ID: run_nz83c8v2t v1.2.0-rc2 Simulated 78% 3 / 0 / 1 1244ms 6/1/2026, 10:51:02 AM View →" [ref=e201]':
+                - 'cell "gemini-2.5-flash Run ID: run_nz83c8v2t" [ref=e202]':
+                  - generic [ref=e203]: gemini-2.5-flash
+                  - generic [ref=e204]: "Run ID: run_nz83c8v2t"
+                - cell "v1.2.0-rc2" [ref=e205]
+                - cell "Simulated" [ref=e206]
+                - cell "78%" [ref=e207]
+                - cell "3 / 0 / 1" [ref=e208]:
+                  - generic [ref=e209]:
+                    - generic [ref=e210]: "3"
+                    - generic [ref=e211]: /
+                    - generic [ref=e212]: "0"
+                    - generic [ref=e213]: /
+                    - generic [ref=e214]: "1"
+                - cell "1244ms" [ref=e215]
+                - cell "6/1/2026, 10:51:02 AM" [ref=e216]
+                - cell "View →" [ref=e217]:
+                  - button "View →" [ref=e218]
+              - 'row "gemini-2.5-flash Run ID: run_ssh_v101 v1.0.1-git-9cd3 Simulated 94% 3 / 1 / 0 820ms 5/29/2026, 10:28:31 AM View →" [ref=e219]':
+                - 'cell "gemini-2.5-flash Run ID: run_ssh_v101" [ref=e220]':
+                  - generic [ref=e221]: gemini-2.5-flash
+                  - generic [ref=e222]: "Run ID: run_ssh_v101"
+                - cell "v1.0.1-git-9cd3" [ref=e223]
+                - cell "Simulated" [ref=e224]
+                - cell "94%" [ref=e225]
+                - cell "3 / 1 / 0" [ref=e226]:
+                  - generic [ref=e227]:
+                    - generic [ref=e228]: "3"
+                    - generic [ref=e229]: /
+                    - generic [ref=e230]: "1"
+                    - generic [ref=e231]: /
+                    - generic [ref=e232]: "0"
+                - cell "820ms" [ref=e233]
+                - cell "5/29/2026, 10:28:31 AM" [ref=e234]
+                - cell "View →" [ref=e235]:
+                  - button "View →" [ref=e236]
+              - 'row "gemini-2.5-flash Run ID: run_ssh_v100 v1.0.0-git-829d Simulated 69% 2 / 1 / 1 1450ms 5/26/2026, 10:28:31 AM View →" [ref=e237]':
+                - 'cell "gemini-2.5-flash Run ID: run_ssh_v100" [ref=e238]':
+                  - generic [ref=e239]: gemini-2.5-flash
+                  - generic [ref=e240]: "Run ID: run_ssh_v100"
+                - cell "v1.0.0-git-829d" [ref=e241]
+                - cell "Simulated" [ref=e242]
+                - cell "69%" [ref=e243]
+                - cell "2 / 1 / 1" [ref=e244]:
+                  - generic [ref=e245]:
+                    - generic [ref=e246]: "2"
+                    - generic [ref=e247]: /
+                    - generic [ref=e248]: "1"
+                    - generic [ref=e249]: /
+                    - generic [ref=e250]: "1"
+                - cell "1450ms" [ref=e251]
+                - cell "5/26/2026, 10:28:31 AM" [ref=e252]
+                - cell "View →" [ref=e253]:
+                  - button "View →" [ref=e254]

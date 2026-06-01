@@ -10,6 +10,7 @@ import RunsList from './components/RunsList';
 import RunDetail from './components/RunDetail';
 import SourcesList from './components/SourcesList';
 import Settings from './components/Settings';
+import SuiteCompare from './components/SuiteCompare';
 
 export default function App() {
   const [currentHash, setCurrentHash] = useState(window.location.hash || '#/');
@@ -48,6 +49,11 @@ export default function App() {
     if (path.startsWith('/suites/') && path.endsWith('/cases/new')) {
       const suiteId = path.substring(8, path.length - 10);
       return { page: 'case-new', suiteId };
+    }
+    // Route: /suites/[id]/compare
+    if (path.startsWith('/suites/') && path.endsWith('/compare')) {
+      const suiteId = path.substring(8, path.length - 8);
+      return { page: 'suite-compare', suiteId };
     }
     // Route: /suites/[id]
     if (path.startsWith('/suites/')) {
@@ -99,6 +105,8 @@ export default function App() {
         return <SuiteNew onNavigate={handleNavigate} />;
       case 'suite-detail':
         return <SuiteDetail suiteId={routeData.suiteId || ''} onNavigate={handleNavigate} />;
+      case 'suite-compare':
+        return <SuiteCompare suiteId={routeData.suiteId || ''} onNavigate={handleNavigate} />;
       case 'case-new':
         return <CaseNew suiteId={routeData.suiteId || ''} onNavigate={handleNavigate} />;
       case 'case-detail':

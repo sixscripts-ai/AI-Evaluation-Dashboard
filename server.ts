@@ -1,3 +1,5 @@
+// Load .env before any module code that reads process.env
+import 'dotenv/config';
 import { createServer as createViteServer } from 'vite';
 import app from './src/app.js';
 

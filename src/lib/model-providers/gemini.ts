@@ -194,6 +194,8 @@ export const geminiInfo = {
   id: 'gemini' as const,
   label: 'Gemini',
   defaultModel: 'gemini-2.5-flash',
+  description: 'Free-tier via AI Studio. 1500 req/day.',
+  models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'],
   envVar: 'GEMINI_API_KEY',
   available: Boolean(process.env.GEMINI_API_KEY),
 };

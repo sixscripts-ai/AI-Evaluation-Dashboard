@@ -188,8 +188,46 @@ Deployed via Vercel. The `api/` directory contains the serverless entry point; `
 
 ---
 
-## Known Limitations (v1.1)
+## Provider Comparison Reports (Milestone 3)
 
+Compare side-by-side RAG sweeps, agents, or models (Gemini, Groq, simulated runs) to understand which provider performs best, fastest, cheapest, and most reliably.
+
+### How to Use
+1. Run at least two evaluations for the same suite (either simulated or real runs).
+2. Click the **Compare Runs** button in the top right of the Suite Detail page, or click the **⚖️ Compare Suite Runs** shortcut next to the suite in the Runs list.
+3. On the comparison page, check the checkboxes for 2–4 completed runs.
+4. The dashboard will automatically compute and render comparison summaries, flags, and a case-by-case comparison matrix.
+
+### What is Compared
+- **Metadata:** Provider, model name, run mode, completed timestamp, and error warnings.
+- **Accuracy Metrics:** Average score, pass count, partial count, and fail count.
+- **Performance & Costs:** Average latency (ms), total tokens, and estimated cost (USD) based on standard token pricing.
+
+### Disagreement Detection
+The comparison engine automatically runs an analysis sweep over test cases to flag differences between selected models:
+- **Status Disagreement:** (High severity) One model passed a case while another completely failed.
+- **Score Gap:** (Medium severity) A score gap of &ge; 25% exists between models on the same case.
+- **Evidence Mismatch:** (High severity) One model matched all required evidence citations while another failed.
+- **Latency Spread:** (Low severity) The slowest model was &ge; 2x slower than the fastest, with at least a 500ms difference.
+- **Provider Error:** (High severity) A model failed at runtime while other models completed.
+
+### Winner & Diagnostics Panel
+A diagnostic overview highlights:
+- **Best Scoring:** Model with the highest average score.
+- **Fastest:** Model with the lowest average response latency.
+- **Most Reliable:** Model with the lowest failed cases and error rate.
+- **Most Consistent:** Model with the lowest variance in scores.
+- **Cases Needing Review:** Cases flagged with Medium or High severity disagreements.
+
+### Exporting Reports
+Click **Copy Markdown** to copy a beautifully formatted Markdown report containing all comparative data, diagnostics, disagreements, and tables to your clipboard. Click **JSON Download** to download the structured comparison data for integration into other dashboards.
+
+---
+
+## Known Limitations (v1.2)
+
+- **Comparison is run-level, not statistical benchmarking.** Compares specific runs rather than multiple trials for statistical significance.
+- **Cost and token usage may be unavailable depending on provider.** If provider doesn't report usage, it displays "not reported" rather than faking values.
 - **Real runs are capped at 10 cases per request.** Truncation is recorded on the run summary modal and the response payload.
 - **30 second per-case timeout.** A single hung provider call does not block the whole run — it is recorded as a failed result and the run continues.
 - **Keyword-based assertions only.** The same rule engine is used for both simulated and real runs; there is no LLM-as-judge yet.
@@ -197,6 +235,7 @@ Deployed via Vercel. The `api/` directory contains the serverless entry point; `
 - **No retries.** A failed call is logged once; the run continues.
 - **No authentication.** Single-user sandbox. No multi-tenant isolation.
 - **File-based persistence.** JSON store does not survive cold starts in serverless environments. For production, replace with a real database.
+- **No scheduled evals yet.**
 - **No streaming.** Runs are synchronous and complete in a single request.
 - **No export/import.** Suite definitions cannot be exported or imported as files.
 

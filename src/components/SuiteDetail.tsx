@@ -3,7 +3,7 @@ import {
   SectionHeader, Breadcrumb, StatusBadge, EmptyState 
 } from './UI.js';
 import { 
-  ArrowLeft, PlusCircle, Play, Layers, ShieldAlert, Cpu, Calendar, Loader2, Gauge, CheckCircle2, ChevronRight, Settings, Sparkles, AlertCircle, ExternalLink 
+  ArrowLeft, PlusCircle, Play, Layers, ShieldAlert, Cpu, Calendar, Loader2, Gauge, CheckCircle2, ChevronRight, Settings, Sparkles, AlertCircle, ExternalLink, BarChart2 
 } from 'lucide-react';
 
 interface SuiteDetailData {
@@ -60,7 +60,6 @@ interface ProviderInfo {
   defaultModel: string;
   models: string[];
   description: string;
-  helpUrl: string;
 }
 
 interface RunModelReport {
@@ -296,6 +295,23 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
             >
               <Play className="w-3.5 h-3.5" />
               Simulate
+            </button>
+            <button
+              onClick={() => onNavigate(`/suites/${suite.id}/compare`)}
+              disabled={runs.filter(r => r.status === 'completed').length < 2}
+              className={`flex items-center gap-2 px-4 py-1.5 border font-semibold text-xs font-mono rounded-sm transition-all cursor-pointer ${
+                runs.filter(r => r.status === 'completed').length >= 2
+                  ? 'border-[#bef264]/40 bg-[#bef264]/10 text-[#bef264] hover:bg-[#bef264]/20'
+                  : 'border-zinc-800 bg-zinc-950/20 text-zinc-600 cursor-not-allowed'
+              }`}
+              title={
+                runs.filter(r => r.status === 'completed').length >= 2
+                  ? 'Compare completed runs side-by-side'
+                  : 'Requires at least 2 completed runs to compare'
+              }
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+              Compare Runs
             </button>
             <button
               onClick={() => {

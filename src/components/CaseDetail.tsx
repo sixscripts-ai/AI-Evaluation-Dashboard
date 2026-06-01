@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { SectionHeader, Breadcrumb, StatusBadge, EmptyState } from './UI.js';
 import { 
-  ArrowLeft, FileText, CheckCircle2, ShieldAlert, Cpu, Layers, Tag, Bookmark, Calendar, Loader2 
+  ArrowLeft, FileText, CheckCircle2, ShieldAlert, Cpu, Layers, Tag, Bookmark, Calendar, Loader2, Save, Edit3
 } from 'lucide-react';
+import { AssertionBuilder } from './AssertionBuilder.js';
+import { AssertionRule } from '../types.js';
 
 interface CaseDetailData {
   testCase: {
@@ -12,6 +14,7 @@ interface CaseDetailData {
     input: string;
     expectedOutput: string;
     requiredEvidence: string;
+    assertions: AssertionRule[];
     tags: string[];
     difficulty: 'easy' | 'medium' | 'hard';
     notes?: string;
@@ -60,6 +63,10 @@ export default function CaseDetail({ caseId, onNavigate }: CaseDetailProps) {
   const [data, setData] = useState<CaseDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedAssertions, setEditedAssertions] = useState<AssertionRule[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -70,6 +77,7 @@ export default function CaseDetail({ caseId, onNavigate }: CaseDetailProps) {
       })
       .then(resData => {
         setData(resData);
+        setEditedAssertions(resData.testCase.assertions || []);
         setIsLoading(false);
       })
       .catch(err => {
@@ -106,6 +114,25 @@ export default function CaseDetail({ caseId, onNavigate }: CaseDetailProps) {
   }
 
   const { testCase, suite, sources, history } = data;
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/cases/${caseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...testCase, assertions: editedAssertions })
+      });
+      if (!res.ok) throw new Error('Failed to save case.');
+      const updated = await res.json();
+      setData(prev => prev ? { ...prev, testCase: updated } : null);
+      setIsEditing(false);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-fade-in font-sans">
@@ -219,6 +246,66 @@ export default function CaseDetail({ caseId, onNavigate }: CaseDetailProps) {
               <p className="text-zinc-400 font-sans text-sm leading-relaxed">{testCase.notes}</p>
             </div>
           )}
+
+          {/* Custom Assertion Builder */}
+          <div className="border border-white/5 rounded-lg bg-zinc-900/50 backdrop-blur-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs text-zinc-400 uppercase tracking-widest font-bold flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-[#bef264]" />
+                Assertion Rules
+              </h3>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => { setIsEditing(false); setEditedAssertions(testCase.assertions || []); }}
+                    className="px-3 py-1.5 border border-zinc-700 text-xs font-mono rounded text-zinc-300 hover:bg-zinc-800"
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#bef264] hover:bg-[#a3e635] text-zinc-900 font-bold text-xs font-mono rounded disabled:opacity-50"
+                  >
+                    {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    Save Rules
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-700 hover:border-zinc-500 text-xs font-mono rounded text-zinc-300"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Edit Rules
+                </button>
+              )}
+            </div>
+            
+            {isEditing ? (
+              <div className="bg-white rounded p-4 text-black">
+                <AssertionBuilder 
+                  assertions={editedAssertions} 
+                  onChange={setEditedAssertions} 
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {testCase.assertions && testCase.assertions.length > 0 ? (
+                  testCase.assertions.map((rule, idx) => (
+                    <div key={rule.id} className="p-3 bg-black/30 border border-white/5 rounded font-mono text-xs flex items-center justify-between">
+                      <span className="text-zinc-500 w-8">#{idx + 1}</span>
+                      <span className="text-[#bef264] flex-1">{rule.type}</span>
+                      <span className="text-zinc-300 flex-1 truncate">{rule.expectedValue}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-zinc-500 italic font-sans text-sm">No assertion rules defined. Evaluations will automatically fail.</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Evidence Sources Side panel */}
