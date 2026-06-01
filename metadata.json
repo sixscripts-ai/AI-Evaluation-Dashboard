@@ -1,6 +1,6 @@
 {
   "name": "EvalBench",
-  "description": "Evaluation infrastructure for testing RAG, agent workflows, and LLM outputs with regression testing, assertions, and evidence tracking.",
+  "description": "Evaluation infrastructure for RAG answers, agent decisions, evidence coverage, assertions, and regression behavior across model runs.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

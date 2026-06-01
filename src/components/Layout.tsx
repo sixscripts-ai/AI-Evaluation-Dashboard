@@ -69,7 +69,7 @@ export function SidebarNav({ currentRoute, onNavigate }: SidebarNavProps) {
             <span className="w-1.5 h-1.5 bg-[#bef264] rounded-full animate-pulse shadow-[0_0_8px_#bef264]" />
           </div>
           <div className="text-[9px] font-mono text-zinc-400 mt-2 truncate">
-            Vite / TS / Exp-Container
+            React 19 · Vite 6 · Express
           </div>
         </div>
       </div>
@@ -112,7 +112,7 @@ export function AppShell({ children, currentRoute, onNavigate }: AppShellProps) 
               <span>/</span>
               <span className="text-zinc-100">{getRouteTitle()}</span>
             </div>
-            <span className="bg-zinc-800 text-[10px] px-2 py-0.5 rounded border border-white/10 font-mono text-zinc-300">v2.4.1</span>
+            <span className="bg-zinc-800 text-[10px] px-2 py-0.5 rounded border border-white/10 font-mono text-zinc-300">v1.0.0</span>
           </div>
           <div className="flex items-center gap-3">
             <button 
