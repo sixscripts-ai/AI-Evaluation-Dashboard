@@ -1,0 +1,449 @@
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createServer as createViteServer } from 'vite';
+import { 
+  getDb, saveDb, addSuite, addCase, addSource, generateId 
+} from './src/db.js';
+import { SuiteSchema, TestCaseSchema, RunSchema } from './src/validators.js';
+import { simulateCase, detectRegressions } from './src/scoring.ts';
+import { EvalRun, EvalResult, Regression } from './src/types.js';
+
+let currentDirname = '';
+try {
+  if (typeof __dirname !== 'undefined') {
+    currentDirname = __dirname;
+  } else {
+    currentDirname = path.dirname(fileURLToPath(import.meta.url));
+  }
+} catch (e) {
+  currentDirname = path.dirname(fileURLToPath(import.meta.url));
+}
+
+const STORE_PATH = path.join(currentDirname, 'src', 'db-store.json');
+
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
+
+  // Body parser
+  app.use(express.json());
+
+  // Ensure DB gets initialized and seeded on start
+  getDb();
+
+  // ==================== API ENDPOINTS ====================
+
+  // Health check
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // 1. Dashboard Metrics
+  app.get('/api/dashboard', (req, res) => {
+    const db = getDb();
+    
+    const completedRuns = db.runs.filter(r => r.status === 'completed');
+    let latestRunScore = 0;
+    let avgLatency = 0;
+    
+    if (completedRuns.length > 0) {
+      // Sort to find the absolute newest run
+      const sorted = [...completedRuns].sort((a, b) => 
+        new Date(b.completedAt || b.startedAt).getTime() - new Date(a.completedAt || a.startedAt).getTime()
+      );
+      latestRunScore = sorted[0].averageScore || 0;
+      
+      // Calculate global average latency across runs
+      const runsWithLatency = completedRuns.filter(r => r.averageLatencyMs !== undefined);
+      if (runsWithLatency.length > 0) {
+        const sum = runsWithLatency.reduce((acc, r) => acc + (r.averageLatencyMs || 0), 0);
+        avgLatency = Math.round(sum / runsWithLatency.length);
+      }
+    }
+
+    // Pass / Fail distribution of individual test cases inside ALL results of the LATEST run of EACH suite
+    let totalPass = 0;
+    let totalPartial = 0;
+    let totalFail = 0;
+
+    // Direct result tallies of all-time results
+    const allResults = db.results;
+    if (allResults.length > 0) {
+      allResults.forEach(r => {
+        if (r.status === 'pass') totalPass++;
+        else if (r.status === 'partial') totalPartial++;
+        else if (r.status === 'fail') totalFail++;
+      });
+    }
+
+    // Join suite name onto recent runs
+    const recentRunsJoined = [...db.runs]
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+      .slice(0, 10)
+      .map(run => {
+        const suite = db.suites.find(s => s.id === run.suiteId);
+        return {
+          ...run,
+          suiteName: suite ? suite.name : 'Unknown Suite',
+        };
+      });
+
+    res.json({
+      totalSuites: db.suites.length,
+      totalTestCases: db.cases.length,
+      latestRunScore: Math.round(latestRunScore),
+      passRate: totalPass,
+      partialRate: totalPartial,
+      failRate: totalFail,
+      totalRegressions: db.regressions.length,
+      averageLatency: avgLatency || 1240,
+      recentRuns: recentRunsJoined
+    });
+  });
+
+  // 2. Suites
+  app.get('/api/suites', (req, res) => {
+    const db = getDb();
+    // Add case counter and run metrics to each suite
+    const suitesWithStats = db.suites.map(suite => {
+      const suiteCases = db.cases.filter(c => c.suiteId === suite.id);
+      const suiteRuns = db.runs.filter(r => r.suiteId === suite.id && r.status === 'completed');
+      
+      let lastScore: number | undefined = undefined;
+      if (suiteRuns.length > 0) {
+        const sorted = [...suiteRuns].sort((a, b) => 
+          new Date(b.completedAt || b.startedAt).getTime() - new Date(a.completedAt || a.startedAt).getTime()
+        );
+        lastScore = sorted[0].averageScore;
+      }
+
+      return {
+        ...suite,
+        caseCount: suiteCases.length,
+        runCount: db.runs.filter(r => r.suiteId === suite.id).length,
+        lastRunScore: lastScore
+      };
+    });
+    res.json(suitesWithStats);
+  });
+
+  app.get('/api/suites/:id', (req, res) => {
+    const db = getDb();
+    const suite = db.suites.find(s => s.id === req.params.id);
+    if (!suite) {
+      return res.status(404).json({ error: 'Suite not found' });
+    }
+
+    const suiteCases = db.cases.filter(c => c.suiteId === suite.id);
+    const suiteRuns = db.runs
+      .filter(r => r.suiteId === suite.id)
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+    res.json({
+      suite,
+      cases: suiteCases,
+      runs: suiteRuns
+    });
+  });
+
+  app.post('/api/suites', (req, res) => {
+    const parsed = SuiteSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.format() });
+    }
+
+    const newSuite = addSuite(parsed.data);
+    res.status(201).json(newSuite);
+  });
+
+  // 3. Test Cases (Create inside a suite)
+  app.post('/api/suites/:id/cases', (req, res) => {
+    const db = getDb();
+    const suite = db.suites.find(s => s.id === req.params.id);
+    if (!suite) {
+      return res.status(404).json({ error: 'Suite not found' });
+    }
+
+    const parsed = TestCaseSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.format() });
+    }
+
+    const { tagsInput, ...rest } = parsed.data;
+    // Map comma string tags to array of strings
+    const tags = tagsInput 
+      ? tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0)
+      : [];
+
+    const newCase = addCase({
+      ...rest,
+      suiteId: suite.id,
+      tags
+    });
+
+    // Automatically create a matching initial evidence source so the evaluation grounding works!
+    const newSource = addSource({
+      caseId: newCase.id,
+      title: `Reference Guideline Source: ${newCase.name}`,
+      sourceType: 'document',
+      excerpt: newCase.requiredEvidence,
+      metadata: { autoGenerated: true }
+    });
+
+    res.status(201).json({ case: newCase, source: newSource });
+  });
+
+  app.get('/api/cases/:id', (req, res) => {
+    const db = getDb();
+    const testCase = db.cases.find(c => c.id === req.params.id);
+    if (!testCase) {
+      return res.status(404).json({ error: 'Test case not found' });
+    }
+
+    const suite = db.suites.find(s => s.id === testCase.suiteId);
+    const caseSources = db.sources.filter(s => s.caseId === testCase.id);
+
+    // Historic results across runs
+    const caseResultsWithRun = db.results
+      .filter(r => r.caseId === testCase.id)
+      .map(result => {
+        const run = db.runs.find(rn => rn.id === result.runId);
+        return {
+          ...result,
+          runModel: run?.modelName || 'Unknown Model',
+          runVersion: run?.systemVersion || 'Unknown Target',
+          runDate: run?.completedAt || result.createdAt
+        };
+      })
+      .sort((a, b) => new Date(b.runDate).getTime() - new Date(a.runDate).getTime());
+
+    res.json({
+      testCase,
+      suite,
+      sources: caseSources,
+      history: caseResultsWithRun
+    });
+  });
+
+  // 4. Runs
+  app.get('/api/runs', (req, res) => {
+    const db = getDb();
+    const runsJoined = db.runs.map(run => {
+      const suite = db.suites.find(s => s.id === run.suiteId);
+      const regressionCount = db.regressions.filter(reg => reg.runId === run.id).length;
+      return {
+        ...run,
+        suiteName: suite ? suite.name : 'Unknown Suite',
+        regressionCount
+      };
+    }).sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+    res.json(runsJoined);
+  });
+
+  app.get('/api/runs/:id', (req, res) => {
+    const db = getDb();
+    const run = db.runs.find(r => r.id === req.params.id);
+    if (!run) {
+      return res.status(404).json({ error: 'Eval Run not found' });
+    }
+
+    const suite = db.suites.find(s => s.id === run.suiteId);
+    
+    // Results for this run, joined with test case details
+    const runResults = db.results
+      .filter(res => res.runId === run.id)
+      .map(result => {
+        const tc = db.cases.find(c => c.id === result.caseId);
+        return {
+          ...result,
+          testCase: tc || null
+        };
+      });
+
+    // Regressions detected in this run
+    const runRegressions = db.regressions
+      .filter(reg => reg.runId === run.id)
+      .map(reg => {
+        const tc = db.cases.find(c => c.id === reg.caseId);
+        return {
+          ...reg,
+          testCase: tc || null
+        };
+      });
+
+    res.json({
+      run,
+      suiteName: suite ? suite.name : 'Unknown Suite',
+      results: runResults,
+      regressions: runRegressions
+    });
+  });
+
+  // Create & Dynamic simulate a run
+  app.post('/api/runs', (req, res) => {
+    const parsed = RunSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.format() });
+    }
+
+    const db = getDb();
+    const { suiteId, modelName, systemVersion, notes, profile } = parsed.data;
+
+    // Check configuration
+    const suite = db.suites.find(s => s.id === suiteId);
+    if (!suite) {
+      return res.status(404).json({ error: 'Target evaluation suite not found.' });
+    }
+
+    const suiteCases = db.cases.filter(c => c.suiteId === suiteId && c.isActive);
+    if (suiteCases.length === 0) {
+      return res.status(400).json({ error: 'Cannot trigger evaluation. No active test cases found in this suite.' });
+    }
+
+    const runId = generateId('run');
+    const startedAt = new Date().toISOString();
+
+    // 1. Simulates results for each target test case
+    const currentResults: EvalResult[] = [];
+    let scoreSum = 0;
+    let latencySum = 0;
+    let passCount = 0;
+    let partialCount = 0;
+    let failCount = 0;
+
+    for (const tc of suiteCases) {
+      const sim = simulateCase(tc, profile);
+      const resId = generateId('res');
+      
+      const rDetail: EvalResult = {
+        id: resId,
+        runId,
+        caseId: tc.id,
+        actualOutput: sim.actualOutput,
+        status: sim.status,
+        score: sim.score,
+        latencyMs: sim.latencyMs,
+        failureReason: sim.failureReason,
+        evidenceMatched: sim.evidenceMatched,
+        evidenceCoverageScore: sim.evidenceCoverageScore,
+        assertions: sim.assertions,
+        notes: sim.notes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      currentResults.push(rDetail);
+      scoreSum += sim.score;
+      latencySum += sim.latencyMs;
+
+      if (sim.status === 'pass') passCount++;
+      else if (sim.status === 'partial') partialCount++;
+      else if (sim.status === 'fail') failCount++;
+    }
+
+    const avgScore = scoreSum / suiteCases.length;
+    const avgLatency = Math.round(latencySum / suiteCases.length);
+
+    // 2. Fetch the previous COMPLETED run for this specific suite to detect regression trends!
+    const suiteCompletedRuns = db.runs
+      .filter(r => r.suiteId === suiteId && r.status === 'completed')
+      .sort((a, b) => new Date(b.completedAt || b.startedAt).getTime() - new Date(a.completedAt || a.startedAt).getTime());
+
+    let computedRegressions: Regression[] = [];
+    if (suiteCompletedRuns.length > 0) {
+      const prevRun = suiteCompletedRuns[0];
+      const prevResults = db.results.filter(res => res.runId === prevRun.id);
+      
+      computedRegressions = detectRegressions(currentResults, prevResults);
+    }
+
+    // 3. Assemble full run metadata
+    const newRun: EvalRun = {
+      id: runId,
+      suiteId,
+      modelName,
+      systemVersion,
+      status: 'completed',
+      startedAt,
+      completedAt: new Date().toISOString(),
+      averageScore: Math.round(avgScore * 100) / 100,
+      passCount,
+      partialCount,
+      failCount,
+      averageLatencyMs: avgLatency,
+      notes,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // 4. Set updates on DB
+    db.runs.unshift(newRun);
+    db.results.push(...currentResults);
+    db.regressions.push(...computedRegressions);
+
+    saveDb(db);
+
+    res.status(201).json({
+      runId,
+      averageScore: newRun.averageScore,
+      regressionCount: computedRegressions.length,
+      regressions: computedRegressions
+    });
+  });
+
+  // 5. Raw Evidence Sources list (Index)
+  app.get('/api/sources', (req, res) => {
+    const db = getDb();
+    const sourcesJoined = db.sources.map(source => {
+      const tc = db.cases.find(c => c.id === source.caseId);
+      const suite = tc ? db.suites.find(s => s.id === tc.suiteId) : null;
+      return {
+        ...source,
+        caseName: tc?.name || 'Isolated Source',
+        suiteName: suite?.name || 'Unassigned'
+      };
+    });
+    res.json(sourcesJoined);
+  });
+
+  // Reset database endpoint
+  app.post('/api/settings/reset', async (req, res) => {
+    const fs = await import('fs');
+    try {
+      if (fs.existsSync(STORE_PATH)) {
+        fs.unlinkSync(STORE_PATH);
+      }
+    } catch (e) {}
+    
+    // De-validate cache
+    const freshDb = getDb();
+    res.json({ message: 'Database reset and seeded successfully!', state: freshDb });
+  });
+
+  // ==================== VITE DEVELOPMENT SERVER SETUP ====================
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  // Bind server
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[EvalBench Console] full-stack workspace running on Port ${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error('[EvalBench Boot Exception]: ', error);
+  process.exit(1);
+});
