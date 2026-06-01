@@ -24,9 +24,27 @@ app.use(express.json());
 
 // ==================== API ENDPOINTS ====================
 
+import { prisma } from './lib/db.js';
+
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  const start = Date.now();
+  let dbStatus = 'disconnected';
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = 'connected';
+  } catch (e) {
+    dbStatus = 'error';
+  }
+  const latencyMs = Date.now() - start;
+
+  res.json({ 
+    ok: true, 
+    database: dbStatus,
+    latencyMs,
+    version: '1.0.0',
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // 1. Dashboard Metrics

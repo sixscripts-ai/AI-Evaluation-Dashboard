@@ -79,7 +79,8 @@ OPENROUTER_API_KEY=...     # https://openrouter.ai/keys
 DEFAULT_MODEL_PROVIDER=gemini      # gemini | groq | openrouter
 DEFAULT_MODEL_NAME=gemini-2.5-flash
 
-DATABASE_URL=...           # Neon Postgres Connection URL
+DATABASE_URL=...           # Pooled connection (Neon) or local postgres://
+DIRECT_URL=...             # Direct connection (Neon) or same as DATABASE_URL
 ```
 
 ---
@@ -104,23 +105,57 @@ EvalBench uses the following primary concepts to represent evaluations:
 ### Local Setup
 
 ```bash
+# Prerequisites: Node.js 18+, a local Postgres database
+createdb evalbench                        # Create local database
 npm install
-cp .env.example .env       # Edit to set API keys and DATABASE_URL
-npm run db:generate        # Generate Prisma Client
-npm run db:push            # Push schema to local or remote Postgres
-npm run db:seed            # Seed initial mock data
+cp .env.example .env                      # Edit to set API keys and DB URLs
+npm run db:generate                        # Generate Prisma Client
+npm run db:migrate                         # Apply migrations (creates tables)
+npm run db:seed                            # Seed initial mock data
 npm run dev
 ```
 The app opens on `http://localhost:3000`. **No API keys are required to develop the app** — simulated mode works completely offline.
 
-### Build & Deploy
+### Production Deployment (Neon + Vercel)
+
+**1. Neon Postgres Setup**
+- Create a project on [Neon](https://neon.tech/).
+- Copy the **Pooled connection string** → `DATABASE_URL`  
+  e.g. `postgresql://user:pass@ep-xxxx-pooler.us-east-2.aws.neon.tech/neondb?pgbouncer=true&connection_limit=1`
+- Copy the **Direct connection string** → `DIRECT_URL`  
+  e.g. `postgresql://user:pass@ep-xxxx.us-east-2.aws.neon.tech/neondb`
+
+**2. Vercel Setup**
+- Import the repository into Vercel.
+- Add `DATABASE_URL` and `DIRECT_URL` to **Vercel Environment Variables** (Production).
+- Add your provider API keys (`GEMINI_API_KEY`, etc.).
+- Set framework preset to **Vite** (build command: `npm run build`, output: `dist`).
+- Deploy.
+
+**3. Database Migration & Seeding**
+Serverless environments don't run Prisma migrations automatically. Run them locally with production env vars:
 
 ```bash
-npm run build       # builds frontend + bundles server
-npm start           # runs the compiled server
+# Apply migrations to production
+DATABASE_URL="<direct-url>" npx prisma migrate deploy
+
+# Seed the production database
+DATABASE_URL="<direct-url>" npx prisma db seed
 ```
 
-The application is configured to deploy seamlessly to Vercel as a serverless function via `vercel.json`. Note: In a serverless environment, the file-based JSON store resets on cold starts. 
+> Use the **direct** connection string for migrations and the **pooled** one for runtime queries (PrismaPg handles pooling automatically).
+
+**4. Verification**
+- Visit `/api/health` on your deployed app. It returns `{"ok": true, "database": "connected", "latencyMs": 15}`.
+
+### Prisma 7 Notes
+
+This project uses **Prisma 7** with a **driver adapter** (`@prisma/adapter-pg`). Key differences from Prisma 6:
+
+- **No `url`/`directUrl` in `schema.prisma`** — connection configuration lives in `prisma.config.ts`.
+- **PrismaClient requires an adapter** at runtime (`PrismaPg`). This is set up in `src/lib/db.ts`.
+- **Seed config** lives in `prisma.config.ts` under `migrations.seed`, not in `package.json`.
+- Use `prisma migrate dev` for local development and `prisma migrate deploy` for production.
 
 ---
 

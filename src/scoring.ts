@@ -3,7 +3,7 @@ import {
   EvalResult, Regression, ServerState, AssertionResult,
   ResultStatus, AssertionRule
 } from './types.js';
-import { generateId } from './db.js';
+import { generateId } from './lib/db.js';
 
 // Simple helper to score case run results
 export interface SimulatedCaseResult {

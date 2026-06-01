@@ -1,23 +1,9 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import "dotenv/config";
 import { 
+  ServerState,
   EvalSuite, EvalCase, EvidenceSource, EvalRun, 
-  EvalResult, Regression, ServerState, AssertionResult 
+  EvalResult, Regression 
 } from '../src/types.js';
-
-let currentDirname = '';
-try {
-  if (typeof __dirname !== 'undefined') {
-    currentDirname = __dirname;
-  } else {
-    currentDirname = path.dirname(fileURLToPath(import.meta.url));
-  }
-} catch (e) {
-  currentDirname = path.dirname(fileURLToPath(import.meta.url));
-}
-
-const STORE_PATH = path.join(currentDirname, 'db-store.json');
 
 // Core helper to generate clean IDs
 export function generateId(prefix: string): string {
@@ -1077,9 +1063,14 @@ function getSeedData(): ServerState {
   };
 }
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL!,
+});
+
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Starting seed...');

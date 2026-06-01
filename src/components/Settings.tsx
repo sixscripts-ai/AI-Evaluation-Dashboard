@@ -106,7 +106,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
             </tr>
             <tr className="border-b border-white/5">
               <td className="py-2 text-zinc-500 uppercase font-bold">Persistence</td>
-              <td className="py-2 text-zinc-300">File-based JSON store (src/db-store.json)</td>
+              <td className="py-2 text-zinc-300">Neon Postgres (via Prisma)</td>
             </tr>
             <tr className="border-b border-white/5">
               <td className="py-2 text-zinc-500 uppercase font-bold">Client</td>
