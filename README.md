@@ -2,6 +2,8 @@
 
 Evaluation infrastructure for RAG answers, agent decisions, evidence coverage, assertions, and regression behavior across model runs.
 
+**Live deployment:** [ai-evaluation-dashboard.vercel.app](https://ai-evaluation-dashboard.vercel.app/)
+
 ---
 
 ## What It Is
