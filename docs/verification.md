@@ -38,6 +38,14 @@ This runs:
 npm start
 ```
 
+### Database management
+
+```bash
+npx prisma generate        # Generate Prisma Client
+npx prisma migrate dev     # Apply local migrations
+npx prisma db seed         # Seed mock data
+```
+
 ## Verifying the app
 
 After `npm run dev` or `npm start`, verify:
@@ -60,22 +68,27 @@ The live deployment is at [ai-evaluation-dashboard.vercel.app](https://ai-evalua
 curl https://ai-evaluation-dashboard.vercel.app/api/health
 ```
 
+Expected response:
+
+```json
+{"ok":true,"database":"connected","latencyMs":265,"version":"1.0.0"}
+```
+
 ### Smoke test
 
 ```bash
 curl -s https://ai-evaluation-dashboard.vercel.app/ | grep -i "<title>"
 ```
 
-## Test data reset
+## Database reset
 
-If the local JSON store gets into a bad state, run:
+To reset the database to seed data:
 
 ```bash
-rm src/db-store.json
-npm start
+npx prisma migrate reset --force
 ```
 
-Or use the in-app Settings page → "Reset to Seed Data" button.
+This drops all tables, re-applies migrations, and runs the seed script.
 
 ## Manual regression scenarios
 
