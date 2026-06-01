@@ -8,6 +8,8 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 export type SourceType = 'document' | 'url' | 'note' | 'dataset' | 'code' | 'other';
 export type RunStatus = 'queued' | 'running' | 'completed' | 'failed';
 export type ResultStatus = 'pass' | 'partial' | 'fail';
+export type RunMode = 'simulated' | 'real';
+export type ProviderId = 'gemini' | 'groq' | 'openrouter';
 
 export interface EvalSuite {
   id: string;
@@ -61,6 +63,13 @@ export interface EvalRun {
   failCount: number;
   averageLatencyMs?: number;
   notes?: string;
+  // Milestone 2 fields
+  provider?: ProviderId | 'simulated';
+  runMode?: RunMode;
+  totalInputTokens?: number;
+  totalOutputTokens?: number;
+  totalTokens?: number;
+  errorMessage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -87,6 +96,12 @@ export interface EvalResult {
   evidenceCoverageScore?: number;
   assertions: AssertionResult[];
   notes?: string;
+  // Milestone 2 fields
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  providerLatencyMs?: number;
+  providerError?: string;
   createdAt: string;
   updatedAt: string;
 }

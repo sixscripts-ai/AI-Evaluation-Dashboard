@@ -1,6 +1,6 @@
 # EvalBench — AI Evaluation Dashboard
 
-Evaluation dashboard for RAG answers, agent decisions, evidence coverage, assertions, and regression behavior across model runs.
+Evaluation dashboard for RAG answers, agent decisions, evidence coverage, assertions, and regression behavior across model runs. EvalBench supports both **simulated runs** (no API keys) and **real model runs** against free-tier-friendly providers: Gemini, Groq, and OpenRouter.
 
 **Live deployment:** [ai-evaluation-dashboard.vercel.app](https://ai-evaluation-dashboard.vercel.app/)
 
@@ -17,11 +17,24 @@ The app is designed for engineers iterating on RAG pipelines, agent tool-use flo
 ## What It Does
 
 - **Define eval suites** — group test cases by system type (RAG, agent, classification, extraction, summarization).
-- **Run evaluations** — trigger a run against a named model and version, with a simulation profile.
+- **Run evaluations** — trigger a run in **simulated** mode (deterministic, no keys required) or **real** mode against Gemini, Groq, or OpenRouter.
 - **Score results** — each case is scored against assertions (output keywords, evidence matching, latency budget).
 - **Detect regressions** — compare each new run to the previous completed run for the same suite. Flag status downgrades, score drops, evidence loss, and latency spikes.
-- **Inspect telemetry** — drill into each run to see per-case input, actual output, expected output, evidence match, and assertion-level explanations.
+- **Inspect telemetry** — drill into each run to see per-case input, actual output, expected output, evidence match, assertion-level explanations, token usage, and provider latency.
 - **Track evidence sources** — reference documents attached to test cases for grounding checks.
+
+---
+
+## Run Modes
+
+EvalBench has two run modes. Both use the same scoring and regression engines.
+
+| Mode | What happens | API keys needed |
+|------|--------------|-----------------|
+| **Simulated** | Deterministic mock profiles (optimized / average / stale). Used for development, demos, and CI. | None |
+| **Real** | Sends the eval prompt to a real provider (Gemini, Groq, or OpenRouter), captures the actual output, and runs the same rule-based assertions. | `GEMINI_API_KEY`, `GROQ_API_KEY`, and/or `OPENROUTER_API_KEY` |
+
+Real runs are capped at **10 active test cases** per request with a **30 second per-case timeout** to keep serverless invocations bounded. Token usage and per-case provider latency are recorded for real runs.
 
 ---
 
@@ -32,6 +45,7 @@ The app is designed for engineers iterating on RAG pipelines, agent tool-use flo
 | Frontend | React 19 + Vite 6 + Tailwind CSS |
 | Backend | Express + Node.js (24.x) |
 | Validation | Zod |
+| Provider calls | Raw `fetch` (no SDKs) for Gemini, Groq (OpenAI-compatible), OpenRouter (OpenAI-compatible) |
 | Persistence | File-based JSON store (`src/db-store.json`) |
 | Deployment | Vercel (serverless functions) |
 
@@ -52,6 +66,7 @@ The Settings page provides a **Reset to seed data** action that deletes the loca
 - **Evaluation Suites** — Group test cases into cohorts.
 - **Test Cases** — Input prompt, expected output, required evidence, difficulty, tags.
 - **Simulated Runs** — Trigger runs with a model name, version, and simulation profile.
+- **Real Model Runs** — Trigger runs against Gemini, Groq, or OpenRouter; record actual outputs, token usage, and provider latency.
 - **Assertion Engine** — Rule-based scoring per result.
 - **Regression Detection** — Automatic comparison against the previous run for the same suite.
 - **Telemetry Dashboard** — Suite count, pass/partial/fail distribution, average latency, recent runs.
@@ -68,7 +83,7 @@ The Settings page provides a **Reset to seed data** action that deletes the loca
 | `evidenceIncludes` | Does the output reference the required evidence? |
 | `latencyLessThanMs` | Did the response complete within the 1500ms SLA? |
 
-Each assertion produces a pass/fail status with an explanation and the expected vs. actual values.
+Each assertion produces a pass/fail status with an explanation and the expected vs. actual values. The assertion engine is the same for simulated and real runs.
 
 ---
 
@@ -88,8 +103,8 @@ A regression is logged when a new run degrades relative to the **previous comple
 - **EvalSuite** — A named group of test cases (e.g. a project or system under test).
 - **EvalCase** — An individual test with input, expected output, required evidence, difficulty, and tags.
 - **EvidenceSource** — A grounding document attached to a test case (url, note, dataset, code, etc.).
-- **EvalRun** — A single evaluation sweep across all active cases in a suite.
-- **EvalResult** — The scored outcome of one case within a run.
+- **EvalRun** — A single evaluation sweep across active cases in a suite. Carries `provider`, `runMode`, `totalInputTokens`, `totalOutputTokens`, `totalTokens`, and `errorMessage`.
+- **EvalResult** — The scored outcome of one case within a run. Carries `inputTokens`, `outputTokens`, `totalTokens`, `providerLatencyMs`, and `providerError`.
 - **Regression** — A detected degradation between two runs for the same case.
 
 ---
@@ -100,8 +115,8 @@ A regression is logged when a new run degrades relative to the **previous comple
 |------|-------------|
 | **Dashboard** | Suite count, assertion status distribution, average latency, recent runs table. |
 | **Eval Suites** | Card grid of all suites with case count, run count, and last score. |
-| **Suite Detail** | Suite metadata, test cases table, run history table, run trigger modal. |
-| **Run Detail** | Per-case results with expandable assertion details, regression summary, score distribution. |
+| **Suite Detail** | Suite metadata, test cases table, run history table, "Simulate" and "Real Eval" trigger modals. |
+| **Run Detail** | Per-case results with expandable assertion details, regression summary, token usage, provider latency, and provider errors. |
 | **Evidence Sources** | Grid of grounding documents with search, linked to their test cases. |
 | **Regression Report** | Visualized in the Run Detail page when regressions are detected. |
 
@@ -113,10 +128,52 @@ A regression is logged when a new run degrades relative to the **previous comple
 
 ```bash
 npm install
+cp .env.example .env       # then edit .env to set any keys you want active
 npm run dev
 ```
 
-Opens on `http://localhost:3000`.
+Opens on `http://localhost:3000`. **No API keys are required to develop the app** — the Simulate button always works.
+
+---
+
+## Real-Eval Provider Setup
+
+To run real evaluations against an external model, set the relevant API key(s) in your environment. The server reads them via `process.env.*` and never returns them to the browser.
+
+```bash
+# .env
+GEMINI_API_KEY=...         # https://aistudio.google.com/apikey
+GROQ_API_KEY=...           # https://console.groq.com/keys
+OPENROUTER_API_KEY=...     # https://openrouter.ai/keys
+
+DEFAULT_MODEL_PROVIDER=gemini      # gemini | groq | openrouter
+DEFAULT_MODEL_NAME=gemini-2.5-flash
+```
+
+On Vercel, set the same variables in **Project Settings → Environment Variables**. The `/api/providers` endpoint exposes only boolean `available` flags, never the keys themselves.
+
+**Default free-tier-friendly models:**
+
+| Provider | Default model | Notes |
+|----------|---------------|-------|
+| Gemini | `gemini-2.5-flash` | Generous free tier via AI Studio. |
+| Groq | `llama-3.1-8b-instant` | Fast, free-tier friendly. |
+| OpenRouter | `openai/gpt-oss-20b:free` | Free model — paid models available but not required. |
+
+The provider can be changed at run time from the **Real Eval** modal in the Suite Detail page. Custom model IDs can be entered directly.
+
+---
+
+## How Real Evaluations Work
+
+1. Open a suite with active test cases.
+2. Click **Real Eval** (the green button). A modal opens.
+3. Pick a provider (the card shows whether the API key is set on the server), pick or type a model, enter a system version, and start.
+4. The server builds a deterministic prompt per case: task name, input, target rubric, required evidence, and a `Evidence sources:` block listing excerpts.
+5. The server calls the provider with a 30 second per-case timeout.
+6. The actual output is scored against the same rule-based assertions used by simulated runs.
+7. Per-case results record input tokens, output tokens, total tokens, and provider latency. A failed provider call is recorded as a failed result with `providerError` populated, and the run continues to the next case.
+8. The run is stored in the in-memory JSON store. Tokens, latency, and provider errors are visible on the Run Detail page.
 
 ---
 
@@ -131,20 +188,31 @@ Deployed via Vercel. The `api/` directory contains the serverless entry point; `
 
 ---
 
-## Known Limitations (v1.0)
+## Known Limitations (v1.1)
 
-- **Simulated scoring** — Runs use deterministic mock profiles (optimized, average, stale), not live LLM calls. No API keys required.
-- **No authentication** — Single-user sandbox. No multi-tenant isolation.
-- **Basic assertions** — Keyword matching only. No LLM-as-judge or semantic scoring.
-- **File-based persistence** — JSON store does not survive cold starts in serverless environments. For production, replace with a real database.
-- **No streaming** — Runs are synchronous and complete in a single request.
-- **No export/import** — Suite definitions cannot be exported or imported as files.
+- **Real runs are capped at 10 cases per request.** Truncation is recorded on the run summary modal and the response payload.
+- **30 second per-case timeout.** A single hung provider call does not block the whole run — it is recorded as a failed result and the run continues.
+- **Keyword-based assertions only.** The same rule engine is used for both simulated and real runs; there is no LLM-as-judge yet.
+- **Token counts depend on provider response shape.** Gemini and OpenRouter-compatible providers return explicit `usage`; OpenAI-compatible providers without usage reporting will record `n/a`.
+- **No retries.** A failed call is logged once; the run continues.
+- **No authentication.** Single-user sandbox. No multi-tenant isolation.
+- **File-based persistence.** JSON store does not survive cold starts in serverless environments. For production, replace with a real database.
+- **No streaming.** Runs are synchronous and complete in a single request.
+- **No export/import.** Suite definitions cannot be exported or imported as files.
+
+---
+
+## Security
+
+- API keys are **server-side only**. They are read via `process.env.*` inside `src/lib/model-providers/*.ts`.
+- The `/api/providers` endpoint exposes only `available: boolean` per provider — never the key material.
+- The client bundle never contains `process.env.GEMINI_API_KEY`, `process.env.GROQ_API_KEY`, or `process.env.OPENROUTER_API_KEY`. Real provider calls are made from the serverless API route, not the browser.
+- The Vercel dashboard should be the only place real keys live in production. `.env.example` contains only placeholders.
 
 ---
 
 ## Next Milestone
 
-- Live LLM integration (Gemini, OpenAI, Claude) replacing the simulation engine.
 - LLM-as-judge assertion mode.
 - Persistent database (SQLite or Postgres).
 - User-defined custom assertions (regex, JSON schema, semantic similarity).

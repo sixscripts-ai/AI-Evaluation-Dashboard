@@ -81,6 +81,90 @@ export function evaluateAssertions(
 }
 
 /**
+ * Build an EvalResult from a real or simulated case outcome.
+ * Used by both the simulated run loop in app.ts and the real-provider
+ * run loop. Computes status, score, evidence match, and the assertion
+ * list from the actual output.
+ */
+export function buildCaseResult(
+  args: {
+    runId: string;
+    caseId: string;
+    actualOutput: string;
+    latencyMs: number;
+    requiredEvidenceMatched: boolean;
+    evidenceCoverageScore: number;
+    failureReason?: string;
+    notes?: string;
+    expectedOutput: string;
+    requiredEvidence: string;
+  }
+): EvalResult {
+  const assertions = evaluateAssertions(
+    args.actualOutput,
+    args.expectedOutput,
+    args.requiredEvidence,
+    args.latencyMs,
+    args.requiredEvidenceMatched
+  );
+
+  const total = assertions.length;
+  const passes = assertions.filter((a) => a.status === 'pass').length;
+  const status: ResultStatus =
+    total === 0
+      ? 'fail'
+      : passes === total
+        ? 'pass'
+        : passes === 0
+          ? 'fail'
+          : 'partial';
+  const score = total === 0 ? 0 : Math.round((passes / total) * 100);
+
+  return {
+    id: generateId('res'),
+    runId: args.runId,
+    caseId: args.caseId,
+    actualOutput: args.actualOutput,
+    status,
+    score,
+    latencyMs: args.latencyMs,
+    failureReason: args.failureReason,
+    evidenceMatched: args.requiredEvidenceMatched,
+    evidenceCoverageScore: args.evidenceCoverageScore,
+    assertions,
+    notes: args.notes,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Heuristic check: does the actual output contain the required evidence
+ * keyword(s)? This is a quick stand-in for a real semantic match. The
+ * goal is to give real-provider runs a meaningful evidence column.
+ */
+export function checkEvidenceMatch(
+  actualOutput: string,
+  requiredEvidence: string
+): { matched: boolean; coverageScore: number } {
+  if (!requiredEvidence || requiredEvidence.trim().length === 0) {
+    return { matched: false, coverageScore: 0 };
+  }
+  const outputLower = actualOutput.toLowerCase();
+  const terms = requiredEvidence
+    .split(/[\s,.\-"]+/)
+    .filter((w) => w.length > 4)
+    .slice(0, 3);
+  if (terms.length === 0) {
+    return { matched: false, coverageScore: 0 };
+  }
+  const hits = terms.filter((t) => outputLower.includes(t.toLowerCase()));
+  const matched = hits.length > 0;
+  const coverageScore = Math.round((hits.length / terms.length) * 100);
+  return { matched, coverageScore };
+}
+
+/**
  * Generate a simulated evaluation run outcome for a checklist case
  */
 export function simulateCase(

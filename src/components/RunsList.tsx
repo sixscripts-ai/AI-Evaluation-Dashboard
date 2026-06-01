@@ -18,6 +18,9 @@ interface RunJoined {
   averageLatencyMs?: number;
   regressionCount: number;
   notes?: string;
+  provider?: 'gemini' | 'groq' | 'openrouter' | 'simulated';
+  runMode?: 'simulated' | 'real';
+  totalTokens?: number;
 }
 
 interface RunsListProps {
@@ -100,6 +103,7 @@ export default function RunsList({ onNavigate }: RunsListProps) {
                   <th className="py-3 px-6">Suite</th>
                   <th className="py-3 px-4">Model</th>
                   <th className="py-3 px-4">Version</th>
+                  <th className="py-3 px-4">Mode</th>
                   <th className="py-3 px-4 text-center">Score</th>
                   <th className="py-3 px-4 text-center">Pass / Partial / Fail</th>
                   <th className="py-3 px-4 text-center">Avg Latency</th>
@@ -127,6 +131,17 @@ export default function RunsList({ onNavigate }: RunsListProps) {
                       <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded font-bold text-zinc-400 text-[10px]">
                         {rn.systemVersion}
                       </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {rn.runMode === 'real' ? (
+                        <span className="px-2 py-0.5 bg-[#bef264]/10 border border-[#bef264]/30 text-[#bef264] text-[10px] font-bold rounded uppercase">
+                          Real · {rn.provider || 'provider'}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] font-bold rounded uppercase">
+                          Simulated
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center font-bold">
                       <span className={`text-sm ${

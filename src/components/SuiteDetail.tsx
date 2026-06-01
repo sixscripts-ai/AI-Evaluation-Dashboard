@@ -3,7 +3,7 @@ import {
   SectionHeader, Breadcrumb, StatusBadge, EmptyState 
 } from './UI.js';
 import { 
-  ArrowLeft, PlusCircle, Play, Layers, ShieldAlert, Cpu, Calendar, Loader2, Gauge, CheckCircle2, ChevronRight, Settings 
+  ArrowLeft, PlusCircle, Play, Layers, ShieldAlert, Cpu, Calendar, Loader2, Gauge, CheckCircle2, ChevronRight, Settings, Sparkles, AlertCircle, ExternalLink 
 } from 'lucide-react';
 
 interface SuiteDetailData {
@@ -42,6 +42,8 @@ interface SuiteDetailData {
     partialCount: number;
     failCount: number;
     averageLatencyMs?: number;
+    provider?: 'gemini' | 'groq' | 'openrouter' | 'simulated';
+    runMode?: 'simulated' | 'real';
   }[];
 }
 
@@ -50,12 +52,36 @@ interface SuiteDetailProps {
   onNavigate: (route: string) => void;
 }
 
+interface ProviderInfo {
+  id: 'gemini' | 'groq' | 'openrouter';
+  label: string;
+  envVar: string;
+  available: boolean;
+  defaultModel: string;
+  models: string[];
+  description: string;
+  helpUrl: string;
+}
+
+interface RunModelReport {
+  runId: string;
+  score: number;
+  regressions: number;
+  provider: string;
+  model: string;
+  totalTokens?: number;
+  errorMessage?: string;
+  casesScored: number;
+  casesTotal: number;
+  truncated: boolean;
+}
+
 export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
   const [data, setData] = useState<SuiteDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Run Creator Dialog controllers
+  // Simulated run dialog state
   const [showRunDrawer, setShowRunDrawer] = useState(false);
   const [runModel, setRunModel] = useState('gemini-2.5-flash');
   const [runVersion, setRunVersion] = useState('v1.2.0-rc2');
@@ -63,6 +89,17 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
   const [runProfile, setRunProfile] = useState<'optimized' | 'average' | 'stale'>('average');
   const [isTriggering, setIsTriggering] = useState(false);
   const [triggerReport, setTriggerReport] = useState<{ runId: string; score: number; regressions: number } | null>(null);
+
+  // Real run dialog state
+  const [showRealRunDrawer, setShowRealRunDrawer] = useState(false);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [realProvider, setRealProvider] = useState<'gemini' | 'groq' | 'openrouter'>('gemini');
+  const [realModel, setRealModel] = useState<string>('gemini-2.5-flash');
+  const [realVersion, setRealVersion] = useState('v1.2.0-rc2');
+  const [realNotes, setRealNotes] = useState('Real model evaluation run.');
+  const [isRealTriggering, setIsRealTriggering] = useState(false);
+  const [realReport, setRealReport] = useState<RunModelReport | null>(null);
+  const [realError, setRealError] = useState<string | null>(null);
 
   const fetchSuiteDetails = () => {
     setIsLoading(true);
@@ -81,8 +118,25 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
       });
   };
 
+  const fetchProviders = () => {
+    fetch('/api/providers')
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to load providers')))
+      .then(pd => {
+        setProviders(pd.providers);
+        if (pd.providers.length > 0) {
+          const def = pd.providers[0];
+          setRealProvider(def.id);
+          setRealModel(def.defaultModel);
+        }
+      })
+      .catch(err => {
+        console.error('Provider fetch failed:', err);
+      });
+  };
+
   useEffect(() => {
     fetchSuiteDetails();
+    fetchProviders();
   }, [suiteId]);
 
   const handleTriggerRun = async (e: React.FormEvent) => {
@@ -115,13 +169,58 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
         regressions: runReport.regressionCount
       });
       setIsTriggering(false);
-      // Let details refresh in background
       fetch(`/api/suites/${suiteId}`)
         .then(r => r.json())
         .then(resData => setData(resData));
     } catch (err: any) {
       alert(`Simulation trigger abort: ${err.message}`);
       setIsTriggering(false);
+    }
+  };
+
+  const handleTriggerRealRun = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsRealTriggering(true);
+    setRealError(null);
+    setRealReport(null);
+
+    try {
+      const res = await fetch(`/api/suites/${suiteId}/run-model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: realProvider,
+          model: realModel,
+          systemVersion: realVersion,
+          runMode: 'real',
+          notes: realNotes,
+        })
+      });
+
+      const runReport = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(runReport.error || `Provider call failed (HTTP ${res.status}).`);
+      }
+
+      setRealReport({
+        runId: runReport.runId,
+        score: runReport.averageScore,
+        regressions: runReport.regressionCount,
+        provider: runReport.provider,
+        model: runReport.model,
+        totalTokens: runReport.totalTokens,
+        errorMessage: runReport.errorMessage,
+        casesScored: runReport.casesScored,
+        casesTotal: runReport.casesTotal,
+        truncated: runReport.truncated,
+      });
+      setIsRealTriggering(false);
+      fetch(`/api/suites/${suiteId}`)
+        .then(r => r.json())
+        .then(resData => setData(resData));
+    } catch (err: any) {
+      setRealError(err.message);
+      setIsRealTriggering(false);
     }
   };
 
@@ -153,6 +252,7 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
   }
 
   const { suite, cases, runs } = data;
+  const activeCaseCount = cases.filter(c => c.isActive).length;
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -191,10 +291,23 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
                 setTriggerReport(null);
                 setShowRunDrawer(true);
               }}
-              className="flex items-center gap-2 px-4 py-1.5 bg-[#bef264] text-black font-semibold text-xs font-mono hover:brightness-110 rounded-sm transition-all cursor-pointer shadow-[0_0_15px_rgba(190,242,100,0.1)]"
+              className="flex items-center gap-2 px-4 py-1.5 border border-zinc-700 hover:border-zinc-500 text-xs font-mono rounded-sm transition-colors cursor-pointer"
+              title="Run a deterministic simulated evaluation (no API keys required)."
             >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              Run Evaluation
+              <Play className="w-3.5 h-3.5" />
+              Simulate
+            </button>
+            <button
+              onClick={() => {
+                setRealReport(null);
+                setRealError(null);
+                setShowRealRunDrawer(true);
+              }}
+              className="flex items-center gap-2 px-4 py-1.5 bg-[#bef264] text-black font-semibold text-xs font-mono hover:brightness-110 rounded-sm transition-all cursor-pointer shadow-[0_0_15px_rgba(190,242,100,0.1)]"
+              title="Run a real evaluation against Gemini, Groq, or OpenRouter (API key required)."
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Real Eval
             </button>
           </div>
         </div>
@@ -220,7 +333,7 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-[#0f0f14] border border-[#2d2d3c] rounded-lg max-w-md w-full overflow-hidden shadow-2xl animate-scale-up font-mono text-xs">
             <div className="px-5 py-4 bg-[#14141d] border-b border-[#252530] flex items-center justify-between">
-              <span className="font-bold text-white uppercase tracking-wider">Run Evaluation</span>
+              <span className="font-bold text-white uppercase tracking-wider">Simulated Run</span>
               <button
                 onClick={() => setShowRunDrawer(false)}
                 className="text-zinc-500 hover:text-white cursor-pointer select-none text-base font-sans"
@@ -372,6 +485,230 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
         </div>
       )}
 
+      {/* Real Model Run Drawer Modal */}
+      {showRealRunDrawer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-[#0f0f14] border border-[#2d2d3c] rounded-lg max-w-lg w-full overflow-hidden shadow-2xl animate-scale-up font-mono text-xs">
+            <div className="px-5 py-4 bg-[#14141d] border-b border-[#252530] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#bef264]" />
+                <span className="font-bold text-white uppercase tracking-wider">Real Model Run</span>
+              </div>
+              <button
+                onClick={() => setShowRealRunDrawer(false)}
+                className="text-zinc-500 hover:text-white cursor-pointer select-none text-base font-sans"
+              >
+                ✕
+              </button>
+            </div>
+
+            {activeCaseCount === 0 ? (
+              <div className="p-5 space-y-3">
+                <div className="p-4 bg-amber-950/20 border border-amber-800/35 text-amber-400 rounded flex gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <div>
+                    <h4 className="font-bold block">No active test cases</h4>
+                    <p className="mt-1 text-zinc-300 font-sans">Add at least one active test case before running a real evaluation.</p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowRealRunDrawer(false)}
+                    className="px-4 py-1.5 border border-zinc-800 hover:border-zinc-700 text-zinc-400 cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : !realReport ? (
+              <form onSubmit={handleTriggerRealRun} className="p-5 space-y-4">
+                <div className="p-3 bg-[#bef264]/5 border border-[#bef264]/15 text-zinc-300 rounded text-[11px] leading-relaxed font-sans">
+                  Runs up to 10 active test cases against a real provider. Each call has a 30s timeout. Tokens and latency are recorded.
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 uppercase font-bold">Provider</label>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {providers.map((p) => {
+                      const isSelected = realProvider === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setRealProvider(p.id);
+                            setRealModel(p.defaultModel);
+                          }}
+                          disabled={isRealTriggering}
+                          className={`p-2 border rounded-sm text-left flex flex-col justify-between h-24 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#bef264]/10 border-[#bef264] text-[#bef264]'
+                              : 'bg-zinc-900 border-zinc-850 text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          <div>
+                            <span className="font-bold text-[11px] block uppercase">{p.id}</span>
+                            <span className={`text-[8px] mt-1 block uppercase ${p.available ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {p.available ? '● key set' : '○ key missing'}
+                            </span>
+                          </div>
+                          <span className="text-[8px] opacity-75 leading-tight font-sans">{p.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 uppercase font-bold">Model</label>
+                  <input
+                    type="text"
+                    value={realModel}
+                    onChange={e => setRealModel(e.target.value)}
+                    required
+                    list="provider-models"
+                    placeholder="e.g. gemini-2.5-flash"
+                    className="w-full"
+                    disabled={isRealTriggering}
+                  />
+                  <datalist id="provider-models">
+                    {(providers.find(p => p.id === realProvider)?.models || []).map(m => (
+                      <option key={m} value={m} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 uppercase font-bold">System Version</label>
+                  <input
+                    type="text"
+                    value={realVersion}
+                    onChange={e => setRealVersion(e.target.value)}
+                    required
+                    placeholder="e.g. v1.2-rc4"
+                    className="w-full"
+                    disabled={isRealTriggering}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 uppercase font-bold">Notes</label>
+                  <textarea
+                    value={realNotes}
+                    onChange={e => setRealNotes(e.target.value)}
+                    rows={2}
+                    className="w-full font-sans"
+                    disabled={isRealTriggering}
+                  />
+                </div>
+
+                {realError && (
+                  <div className="p-3 bg-rose-950/20 border border-rose-800/35 text-rose-400 rounded text-[11px] leading-relaxed font-sans">
+                    {realError}
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-white/5 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowRealRunDrawer(false)}
+                    className="px-4 py-2 border border-zinc-800 hover:border-zinc-700 text-zinc-400 transition-colors cursor-pointer"
+                    disabled={isRealTriggering}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-[#bef264] text-black font-bold transition-colors rounded-sm flex items-center gap-1.5 cursor-pointer hover:brightness-110"
+                    disabled={isRealTriggering}
+                  >
+                    {isRealTriggering ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Running...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3" /> Start Real Run
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-5 space-y-4">
+                {realReport.errorMessage ? (
+                  <div className="p-3 bg-amber-950/20 border border-amber-800/35 text-amber-400 rounded text-[11px] leading-relaxed font-sans">
+                    <strong className="block uppercase tracking-wider mb-1">Provider warning</strong>
+                    {realReport.errorMessage}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-emerald-950/20 border border-emerald-800/35 text-emerald-400 rounded flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 shrink-0" />
+                    <div>
+                      <h4 className="font-bold block tracking-wide">Run complete</h4>
+                      <p className="mt-1 text-zinc-300 font-sans">
+                        {realReport.casesScored} of {realReport.casesTotal} test cases scored.
+                        {realReport.truncated && ' (Real runs are capped at 10 cases.)'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 border border-white/5 rounded bg-black/30 p-3 text-center">
+                  <div className="border-r border-white/5 py-1">
+                    <span className="text-[9px] text-[#bef264] uppercase block">Average Score</span>
+                    <span className="text-xl font-bold font-mono tracking-tight text-white">
+                      {Math.round(realReport.score)}%
+                    </span>
+                  </div>
+                  <div className="py-1">
+                    <span className="text-[9px] text-rose-400 uppercase block">Regressions</span>
+                    <span className="text-xl font-bold font-mono tracking-tight text-white">
+                      {realReport.regressions > 0 ? `${realReport.regressions}` : '0'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border border-white/5 rounded bg-black/20 p-3 text-[11px] space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500 uppercase">Provider</span>
+                    <span className="text-zinc-300 font-bold">{realReport.provider}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500 uppercase">Model</span>
+                    <span className="text-zinc-300 font-sans">{realReport.model}</span>
+                  </div>
+                  {typeof realReport.totalTokens === 'number' && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500 uppercase">Total tokens</span>
+                      <span className="text-zinc-300">{realReport.totalTokens.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 text-xs font-mono pt-2">
+                  <button
+                    onClick={() => setShowRealRunDrawer(false)}
+                    className="px-4 py-1.5 border border-zinc-800 hover:border-zinc-700 text-zinc-400 cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowRealRunDrawer(false);
+                      onNavigate(`/runs/${realReport.runId}`);
+                    }}
+                    className="px-4 py-1.5 bg-[#bef264] text-black font-semibold rounded-sm cursor-pointer hover:brightness-110"
+                  >
+                    View Run Details →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Test Cases and Runs */}
       <div className="space-y-6">
         {/* Test Cases */}
@@ -507,6 +844,7 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
                   <tr className="bg-black/30 text-zinc-400 border-b border-white/5 uppercase text-[10px] tracking-wider">
                     <th className="py-3 px-6">Model</th>
                     <th className="py-3 px-4">Version</th>
+                    <th className="py-3 px-4">Mode</th>
                     <th className="py-3 px-4 text-center">Average Score</th>
                     <th className="py-3 px-4 text-center">Pass / Partial / Fail</th>
                     <th className="py-3 px-4 text-center">Latency</th>
@@ -525,6 +863,17 @@ export default function SuiteDetail({ suiteId, onNavigate }: SuiteDetailProps) {
                         <span className="px-2 py-0.5 bg-white/5 border border-white/10 text-zinc-300 text-[10px] font-bold rounded">
                           {rn.systemVersion}
                         </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {rn.runMode === 'real' ? (
+                          <span className="px-2 py-0.5 bg-[#bef264]/10 border border-[#bef264]/30 text-[#bef264] text-[10px] font-bold rounded uppercase">
+                            Real · {rn.provider || 'provider'}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] font-bold rounded uppercase">
+                            Simulated
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className={`text-sm font-bold ${

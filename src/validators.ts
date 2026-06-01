@@ -32,3 +32,17 @@ export const RunSchema = z.object({
 });
 
 export type RunInput = z.infer<typeof RunSchema>;
+
+/**
+ * Real-or-simulated model run. Used by POST /api/suites/:id/run-model.
+ */
+export const RunModelSchema = z.object({
+  provider: z.enum(['gemini', 'groq', 'openrouter']).optional(),
+  model: z.string().min(2).optional(),
+  systemVersion: z.string().min(2, { message: 'An active deployment tracking software version is required.' }),
+  runMode: z.enum(['simulated', 'real']).default('simulated'),
+  notes: z.string().optional(),
+  profile: z.enum(['optimized', 'average', 'stale']).default('average'),
+});
+
+export type RunModelInput = z.infer<typeof RunModelSchema>;

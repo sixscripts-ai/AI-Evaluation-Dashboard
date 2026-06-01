@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { SectionHeader, Breadcrumb, StatusBadge, RegressionBadge, JsonBlock } from './UI.js';
 import { 
-  ShieldAlert, Clock, PlayCircle, Loader2, BarChart, ChevronDown, ChevronUp, CheckSquare, Zap, AlertTriangle, FileText, ChevronRight 
+  ShieldAlert, Clock, PlayCircle, Loader2, BarChart, ChevronDown, ChevronUp, CheckSquare, Zap, AlertTriangle, FileText, ChevronRight, Sparkles, Hash, Timer 
 } from 'lucide-react';
 
 interface Assertion {
@@ -26,6 +26,11 @@ interface RunResultWithCase {
   evidenceCoverageScore?: number;
   assertions: Assertion[];
   notes?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  providerLatencyMs?: number;
+  providerError?: string;
   createdAt: string;
   testCase?: {
     name: string;
@@ -63,6 +68,12 @@ interface RunDetailData {
     failCount: number;
     averageLatencyMs?: number;
     notes?: string;
+    provider?: 'gemini' | 'groq' | 'openrouter' | 'simulated';
+    runMode?: 'simulated' | 'real';
+    totalInputTokens?: number;
+    totalOutputTokens?: number;
+    totalTokens?: number;
+    errorMessage?: string;
   };
   suiteName: string;
   results: RunResultWithCase[];
@@ -189,6 +200,43 @@ export default function RunDetail({ runId, onNavigate }: RunDetailProps) {
           <div className="p-3.5 bg-black/40 rounded border border-white/5 text-zinc-300 max-w-4xl font-sans text-xs animate-fade-in">
             <span className="font-mono text-[9px] uppercase font-bold text-zinc-500 block mb-1">Notes</span>
             {run.notes}
+          </div>
+        )}
+
+        {run.runMode === 'real' && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-white/5">
+            <div>
+              <span className="text-[9px] text-zinc-500 block uppercase flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-[#bef264]" /> Provider
+              </span>
+              <span className="text-white font-bold leading-none mt-1 block uppercase">{run.provider}</span>
+            </div>
+            <div>
+              <span className="text-[9px] text-zinc-500 block uppercase">Mode</span>
+              <span className="text-[#bef264] font-bold leading-none mt-1 block">Real model</span>
+            </div>
+            <div>
+              <span className="text-[9px] text-zinc-500 block uppercase flex items-center gap-1">
+                <Hash className="w-3 h-3" /> Total tokens
+              </span>
+              <span className="text-white font-bold leading-none mt-1 block">
+                {typeof run.totalTokens === 'number' ? run.totalTokens.toLocaleString() : 'n/a'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[9px] text-zinc-500 block uppercase flex items-center gap-1">
+                <Timer className="w-3 h-3" /> Avg latency
+              </span>
+              <span className="text-white font-bold leading-none mt-1 block">
+                {run.averageLatencyMs ? `${run.averageLatencyMs}ms` : 'n/a'}
+              </span>
+            </div>
+            {run.errorMessage && (
+              <div className="col-span-full p-3 bg-amber-950/20 border border-amber-800/35 text-amber-400 rounded text-[11px] leading-relaxed font-sans">
+                <strong className="block uppercase tracking-wider mb-1">Provider warning</strong>
+                {run.errorMessage}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -396,8 +444,30 @@ export default function RunDetail({ runId, onNavigate }: RunDetailProps) {
                                 Failure: {res.failureReason}
                               </p>
                             )}
+                            {res.providerError && (
+                              <p className="p-2.5 bg-amber-950/20 text-amber-400 border border-amber-900/15 rounded text-[10px]">
+                                Provider error: {res.providerError}
+                              </p>
+                            )}
                           </div>
                         </div>
+
+                        {(res.inputTokens !== undefined || res.outputTokens !== undefined || res.providerLatencyMs !== undefined) && (
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="p-3 rounded border border-white/5 bg-black/20 text-center">
+                              <span className="text-[9px] text-zinc-500 block uppercase">Input tokens</span>
+                              <span className="text-zinc-200 font-bold font-mono">{res.inputTokens ?? 'n/a'}</span>
+                            </div>
+                            <div className="p-3 rounded border border-white/5 bg-black/20 text-center">
+                              <span className="text-[9px] text-zinc-500 block uppercase">Output tokens</span>
+                              <span className="text-zinc-200 font-bold font-mono">{res.outputTokens ?? 'n/a'}</span>
+                            </div>
+                            <div className="p-3 rounded border border-white/5 bg-black/20 text-center">
+                              <span className="text-[9px] text-zinc-500 block uppercase">Provider latency</span>
+                              <span className="text-zinc-200 font-bold font-mono">{res.providerLatencyMs ? `${res.providerLatencyMs}ms` : 'n/a'}</span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Expected vs Required Evidence */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
