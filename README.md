@@ -14,6 +14,61 @@ Persistence is via **Prisma ORM + Postgres**. [Neon](https://neon.tech/) is the 
 
 ---
 
+## How it works
+
+EvalBench orchestrates evaluation pipelines by linking test data with execution engines and scoring logic:
+1. **Define Test Cases**: Users author `EvalCase` records containing inputs, expected outputs, and `AssertionRule` thresholds.
+2. **Execute Sweep**: The `EvalRun` engine streams the inputs to the selected model provider (Gemini, Groq, OpenRouter) or falls back to a deterministic simulated response.
+3. **Score & Validate**: The system evaluates the model's actual output against the predefined assertions (e.g., `regexMatch`, `latencyLessThanMs`).
+4. **Detect Regressions**: Results are compared against the previous baseline run to automatically flag score drops, status downgrades, or latency spikes.
+
+---
+
+## Architecture
+
+```mermaid
+graph TD
+    UI[React Frontend UI] -->|REST API| API[Express Backend API]
+    
+    API --> DB[(Neon Postgres DB)]
+    DB -->|Prisma ORM| API
+    
+    API --> Runner[Evaluation Runner]
+    
+    Runner -->|Simulated| Sim[Deterministic Simulator]
+    Runner -->|Real Provider| Models[LLM Providers]
+    
+    Models --> Gemini[Gemini API]
+    Models --> Groq[Groq API]
+    Models --> OR[OpenRouter API]
+    
+    Runner --> Scorer[Assertion Scorer]
+    Scorer --> Rules[Regex, Latency, Extraction Logic]
+    
+    Scorer --> Regression[Regression Engine]
+    Regression --> DB
+```
+
+---
+
+## Demo & Screenshots
+
+*(A 60–90 second video walkthrough of EvalBench in action goes here.)*
+
+### Dashboard
+![Dashboard Screenshot Placeholder](docs/images/dashboard.png)
+*Provides suite count, assertion status distribution, average latency, and recent runs table.*
+
+### Assertion Builder
+![Assertion Builder Screenshot Placeholder](docs/images/assertion-builder.png)
+*Visual interface for defining custom rules and evaluation criteria.*
+
+### Run Detail & Provider Comparison
+![Provider Comparison Report Screenshot Placeholder](docs/images/provider-comparison.png)
+*Side-by-side analysis of model performance, cost, and disagreements.*
+
+---
+
 ## Current features
 
 - **Eval Suites** — Group test cases into named cohorts.
