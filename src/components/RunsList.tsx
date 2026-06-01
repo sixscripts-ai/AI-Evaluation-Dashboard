@@ -50,38 +50,38 @@ export default function RunsList({ onNavigate }: RunsListProps) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-4">
         <Loader2 className="w-8 h-8 text-[#bef264] animate-spin" />
-        <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Opening Telemetry Vault...</span>
+        <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Loading runs...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 animate-fade-in font-mono text-xs">
-      <SectionHeader 
-        title="Evaluation Runs" 
-        subtitle="Chronological logbook recording specific model stress tests, regression flags, and assertion analytics." 
+      <SectionHeader
+        title="Runs"
+        subtitle="A chronological log of evaluation runs across all suites. Compare versions and detect regressions."
       />
 
       {error && (
         <div className="bg-rose-950/20 border border-rose-800/35 p-5 text-rose-400 rounded flex gap-3 text-xs font-mono">
           <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold uppercase tracking-wider block mb-1">Server Connection exception</span>
+            <span className="font-bold uppercase tracking-wider block mb-1">Failed to load runs</span>
             {error}
           </div>
         </div>
       )}
 
       {runs.length === 0 ? (
-        <EmptyState 
-          title="No evaluation runs logged" 
-          description="Build a code/prompt change pipeline, select an active evaluation suite workstation, and click 'Run Suite Evaluation' to serialize results."
+        <EmptyState
+          title="No runs yet"
+          description="Run a suite to see it appear here. Each run captures model, version, score, and regression status."
           action={
-            <button 
+            <button
               onClick={() => onNavigate('/suites')}
               className="px-4 py-1.5 bg-[#bef264] text-black font-semibold font-mono rounded cursor-pointer hover:brightness-110 transition-all"
             >
-              Trigger Suite Run
+              Go to Suites
             </button>
           }
         />
@@ -89,7 +89,7 @@ export default function RunsList({ onNavigate }: RunsListProps) {
         <div className="border border-white/5 rounded-lg bg-zinc-900/50 backdrop-blur-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
             <h3 className="text-xs text-zinc-300 font-bold uppercase tracking-wider">
-              Telemetry Execution Ledger ({runs.length} Runs logged)
+              All Runs ({runs.length})
             </h3>
           </div>
 
@@ -97,15 +97,15 @@ export default function RunsList({ onNavigate }: RunsListProps) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-black/30 text-zinc-400 border-b border-white/5 uppercase text-[10px] tracking-wider font-bold">
-                  <th className="py-3 px-6">Suite target</th>
-                  <th className="py-3 px-4">Backing Model</th>
-                  <th className="py-3 px-4">Software Version</th>
+                  <th className="py-3 px-6">Suite</th>
+                  <th className="py-3 px-4">Model</th>
+                  <th className="py-3 px-4">Version</th>
                   <th className="py-3 px-4 text-center">Score</th>
-                  <th className="py-3 px-4 text-center">Quality ratio</th>
-                  <th className="py-3 px-4 text-center">Average Latency</th>
-                  <th className="py-3 px-4 text-center">Trend Flag</th>
-                  <th className="py-3 px-4">Date/Time Executed</th>
-                  <th className="py-3 px-6 text-right">Details</th>
+                  <th className="py-3 px-4 text-center">Pass / Partial / Fail</th>
+                  <th className="py-3 px-4 text-center">Avg Latency</th>
+                  <th className="py-3 px-4 text-center">Regressions</th>
+                  <th className="py-3 px-4">Executed</th>
+                  <th className="py-3 px-6 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -118,7 +118,7 @@ export default function RunsList({ onNavigate }: RunsListProps) {
                       >
                         {rn.suiteName}
                       </button>
-                      <span className="block text-[10px] text-zinc-500 mt-0.5">UID: {rn.id}</span>
+                      <span className="block text-[10px] text-zinc-500 mt-0.5">ID: {rn.id}</span>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-zinc-300 font-bold">{rn.modelName}</span>
@@ -130,10 +130,10 @@ export default function RunsList({ onNavigate }: RunsListProps) {
                     </td>
                     <td className="py-3 px-4 text-center font-bold">
                       <span className={`text-sm ${
-                        (rn.averageScore || 0) >= 85 
-                          ? 'text-emerald-400' 
-                          : (rn.averageScore || 0) >= 60 
-                            ? 'text-amber-400' 
+                        (rn.averageScore || 0) >= 85
+                          ? 'text-emerald-400'
+                          : (rn.averageScore || 0) >= 60
+                            ? 'text-amber-400'
                             : 'text-rose-400'
                       }`}>
                         {rn.averageScore !== undefined ? `${Math.round(rn.averageScore)}%` : '---'}
@@ -141,11 +141,11 @@ export default function RunsList({ onNavigate }: RunsListProps) {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-center gap-1.5 font-bold font-mono">
-                        <span className="text-emerald-400">{rn.passCount} ✓</span>
-                        <span className="text-zinc-650 font-sans">|</span>
-                        <span className="text-amber-500">{rn.partialCount} △</span>
-                        <span className="text-zinc-650 font-sans">|</span>
-                        <span className="text-rose-500">{rn.failCount} ✗</span>
+                        <span className="text-emerald-400">{rn.passCount}</span>
+                        <span className="text-zinc-600 font-sans">/</span>
+                        <span className="text-amber-500">{rn.partialCount}</span>
+                        <span className="text-zinc-600 font-sans">/</span>
+                        <span className="text-rose-500">{rn.failCount}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-center text-zinc-300">
@@ -154,10 +154,10 @@ export default function RunsList({ onNavigate }: RunsListProps) {
                     <td className="py-3 px-4 text-center">
                       {rn.regressionCount > 0 ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/25 text-rose-400 text-[10px] font-bold">
-                          ⚠️ {rn.regressionCount} DEGRADED
+                          {rn.regressionCount}
                         </span>
                       ) : (
-                        <span className="text-emerald-400 text-[10px] font-bold">✓ STABLE</span>
+                        <span className="text-emerald-400 text-[10px] font-bold">0</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-zinc-400">
@@ -166,9 +166,9 @@ export default function RunsList({ onNavigate }: RunsListProps) {
                     <td className="py-3 px-6 text-right">
                       <button
                         onClick={() => onNavigate(`/runs/${rn.id}`)}
-                        className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-850 hover:border-zinc-500 border border-zinc-800 text-[#bef264] tracking-wider uppercase text-[10px] rounded transition-colors cursor-pointer font-bold"
+                        className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-850 hover:border-zinc-500 border border-zinc-800 text-[#bef264] text-[10px] rounded transition-colors cursor-pointer font-bold"
                       >
-                        Ledger
+                        View
                       </button>
                     </td>
                   </tr>

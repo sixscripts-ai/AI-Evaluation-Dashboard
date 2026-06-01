@@ -63,9 +63,9 @@ export function SidebarNav({ currentRoute, onNavigate }: SidebarNavProps) {
       {/* Workspace Footer status */}
       <div className="p-4 border-t border-white/5">
         <div className="bg-[#bef264]/5 border border-[#bef264]/20 rounded p-3">
-          <div className="text-[10px] uppercase tracking-wider text-[#bef264] font-bold mb-1">Workspace State</div>
+          <div className="text-[10px] uppercase tracking-wider text-[#bef264] font-bold mb-1">Status</div>
           <div className="text-xs text-white truncate font-mono flex items-center justify-between">
-            <span>STANDALONE</span>
+            <span>Online</span>
             <span className="w-1.5 h-1.5 bg-[#bef264] rounded-full animate-pulse shadow-[0_0_8px_#bef264]" />
           </div>
           <div className="text-[9px] font-mono text-zinc-400 mt-2 truncate">
@@ -108,14 +108,14 @@ export function AppShell({ children, currentRoute, onNavigate }: AppShellProps) 
         <header className="h-16 border-b border-white/10 flex items-center justify-between px-8 z-10 bg-zinc-950/20 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-zinc-400 text-xs font-mono uppercase tracking-widest">
-              <span>SUITES</span>
+              <span>EVALBENCH</span>
               <span>/</span>
               <span className="text-zinc-100">{getRouteTitle()}</span>
             </div>
             <span className="bg-zinc-800 text-[10px] px-2 py-0.5 rounded border border-white/10 font-mono text-zinc-300">v1.0.0</span>
           </div>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => onNavigate('/runs')}
               className="px-3 py-1.5 bg-[#bef264] text-black text-xs font-bold rounded uppercase tracking-wide hover:brightness-110 transition-all cursor-pointer font-sans"
             >
