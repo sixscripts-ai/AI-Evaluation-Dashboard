@@ -53,18 +53,26 @@ graph TD
 
 ## Demo & Screenshots
 
-*(A 60–90 second video walkthrough of EvalBench in action goes here.)*
+[Watch 60-90s Demo Video](docs/demo/evalbench-demo.mp4)
 
 ### Dashboard
-![Dashboard Screenshot Placeholder](docs/images/dashboard.png)
+![Dashboard](docs/images/dashboard.png)
 *Provides suite count, assertion status distribution, average latency, and recent runs table.*
 
+### Suite Detail
+![Suite Detail](docs/images/suite-detail.png)
+*Groups test cases, expected outputs, required evidence, and scoring rules for a specific AI workflow.*
+
 ### Assertion Builder
-![Assertion Builder Screenshot Placeholder](docs/images/assertion-builder.png)
+![Assertion Builder](docs/images/assertion-builder.png)
 *Visual interface for defining custom rules and evaluation criteria.*
 
-### Run Detail & Provider Comparison
-![Provider Comparison Report Screenshot Placeholder](docs/images/provider-comparison.png)
+### Run Detail
+![Run Detail](docs/images/run-detail.png)
+*Result storing the model output, score, pass/partial/fail status, assertion evidence, and regression signals.*
+
+### Provider Comparison
+![Provider Comparison Report](docs/images/provider-comparison.png)
 *Side-by-side analysis of model performance, cost, and disagreements.*
 
 ---

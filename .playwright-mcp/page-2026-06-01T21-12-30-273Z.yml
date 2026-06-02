@@ -1,0 +1,38 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e9]: EvalBench
+    - navigation [ref=e10]:
+      - button "Dashboard" [active] [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+        - text: Dashboard
+      - button "Eval Suites" [ref=e14] [cursor=pointer]:
+        - img [ref=e15]
+        - text: Eval Suites
+      - button "Eval Runs" [ref=e19] [cursor=pointer]:
+        - img [ref=e20]
+        - text: Eval Runs
+      - button "Evidence Sources" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - text: Evidence Sources
+      - button "Demo Controllers" [ref=e26] [cursor=pointer]:
+        - img [ref=e27]
+        - text: Demo Controllers
+    - generic [ref=e31]:
+      - generic [ref=e32]: Status
+      - generic [ref=e34]: Online
+      - generic [ref=e36]: React 19 · Vite 6 · Express
+  - main [ref=e37]:
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]: EVALBENCH
+          - generic [ref=e42]: /
+          - generic [ref=e43]: Dashboard
+        - generic [ref=e44]: v1.0.0
+      - button "New Run" [ref=e46] [cursor=pointer]
+    - generic [ref=e51]:
+      - heading "Failed to load dashboard" [level=3] [ref=e52]:
+        - img [ref=e53]
+        - text: Failed to load dashboard
+      - paragraph [ref=e55]: Failed to fetch
+      - button "Retry" [ref=e56] [cursor=pointer]
